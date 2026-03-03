@@ -8,8 +8,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/var/www
-    depends_on:
-      - db
+    # HAPUS BAGIAN depends_on: - db DI SINI
 
   # Frontend SPA (Vue)
   frontend:
@@ -20,19 +19,4 @@ services:
       - "5173:5173"
     volumes:
       - ./frontend:/app
-      - /app/node_modules # Menghindari node_modules terhapus saat mounting
-
-  # Database (MySQL)
-  db:
-    image: mysql:8.0
-    container_name: vault-db
-    environment:
-      MYSQL_DATABASE: secure_vault_db
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-
-volumes:
-  db_data:
+      - /app/node_modules
