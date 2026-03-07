@@ -2,23 +2,25 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
+use App\Models\VaultFile;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     *
-     * @return void
-     */
-    public function run()
+    public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        // 1. Buat User Dummy (untuk login nanti)
+        User::updateOrCreate(
+            ['email' => 'yusuf@example.com'], // Cek apakah email ini sudah ada
+            [
+                'name' => 'Solehudin Yusuf',
+                'password' => Hash::make('password123'),
+            ]
+        );
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        // 2. Buat 10 data file dummy menggunakan Factory
+        VaultFile::factory(10)->create();
     }
 }
