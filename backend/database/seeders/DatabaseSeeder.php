@@ -4,7 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\VaultFile;
+use App\Models\ActivityLog;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Seeder;
+use Illuminate\Notifications\Action;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -22,5 +25,7 @@ class DatabaseSeeder extends Seeder
 
         // 2. Buat 10 data file dummy menggunakan Factory
         VaultFile::factory(10)->create();
+        ActivityLog::factory(20)->create();
+        UserFactory::factory(10)->create();
     }
 }

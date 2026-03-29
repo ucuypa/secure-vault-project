@@ -20,6 +20,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('/files', [VaultFileController::class, 'index']);
-
+Route::apiResource('files', VaultFileController::class);
 Route::apiResource('logs', ActivityLogController::class);
