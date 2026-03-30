@@ -8,7 +8,6 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/var/www
-    # HAPUS BAGIAN depends_on: - db DI SINI
 
   # Frontend SPA (Vue)
   frontend:
