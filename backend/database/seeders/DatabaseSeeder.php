@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Solehudin Yusuf',
                 'password' => Hash::make('password123'),
+                'profilepictures' => 'awkjdjakjdjaw.jpg'
             ]
         );
 
