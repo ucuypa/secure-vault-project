@@ -22,5 +22,8 @@ class DatabaseSeeder extends Seeder
 
         // 2. Buat 10 data file dummy menggunakan Factory
         VaultFile::factory(10)->create();
+
+        // buat 10 orang palsu sekaligus
+        \App\Models\User::factory(10)->create();
     }
 }
