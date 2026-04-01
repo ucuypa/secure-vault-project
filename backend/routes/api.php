@@ -22,3 +22,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::apiResource('files', VaultFileController::class);
 Route::apiResource('logs', ActivityLogController::class);
+Route::apiResource('users', UserController::class);

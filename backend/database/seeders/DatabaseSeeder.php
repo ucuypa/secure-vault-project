@@ -20,12 +20,12 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Solehudin Yusuf',
                 'password' => Hash::make('password123'),
+                'profilepictures' => 'awkjdjakjdjaw.jpg'
             ]
         );
 
-        // 2. Buat 10 data file dummy menggunakan Factory
+        // 2. Buat data file dummy menggunakan Factory
         VaultFile::factory(10)->create();
         ActivityLog::factory(20)->create();
-        UserFactory::factory(10)->create();
     }
 }
