@@ -10,7 +10,6 @@ class ActivityLogController extends Controller
 {
     public function index()
     {
-        // Mengambil semua riwayat aktivitas dari tabel activity_logs
         $logs = ActivityLog::latest()->get();
 
         return response()->json([
@@ -22,17 +21,21 @@ class ActivityLogController extends Controller
 
     public function store(Request $request)
     {
-        // Mencatat log baru
+        // PERBAIKAN: Tambahkan rule 'exists' agar tidak crash jika ID salah
         $validated = $request->validate([
-            'action' => 'required|string',
-            'user_id' => 'nullable|integer',
-            'vault_file_id' => 'nullable|integer',
+            'action'        => 'required|string',
+            'user_id'       => 'required|exists:users,id', // Harus ada di tabel users
+            'vault_file_id' => 'nullable|exists:vault_files,id', // Harus ada di tabel vault_files
         ]);
 
-        $validated['ip_address'] = $request->ip();
-        $validated['user_agent'] = $request->userAgent();
-
-        $log = ActivityLog::create($validated);
+        // Otomatis ambil data dari request (lebih aman daripada manual di Postman)
+        $log = ActivityLog::create([
+            'action'        => $validated['action'],
+            'user_id'       => $validated['user_id'],
+            'vault_file_id' => $validated['vault_file_id'],
+            'ip_address'    => $request->ip(),
+            'user_agent'    => $request->userAgent(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -43,9 +46,10 @@ class ActivityLogController extends Controller
 
     public function update(Request $request, string $id)
     {
-        // Mengubah status log
         $log = ActivityLog::findOrFail($id);
-        $log->update($request->all());
+        
+        // Batasi apa yang boleh diubah, biasanya hanya action/catatan saja
+        $log->update($request->only(['action']));
 
         return response()->json([
             'success' => true,
@@ -56,14 +60,12 @@ class ActivityLogController extends Controller
 
     public function destroy(string $id)
     {
-        // Membersihkan log lama
         $log = ActivityLog::findOrFail($id);
         $log->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Log berhasil dihapus',
-            'data'    => null
+            'message' => 'Log berhasil dihapus'
         ], 200);
     }
 }
