@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\VaultFileController;
 use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------

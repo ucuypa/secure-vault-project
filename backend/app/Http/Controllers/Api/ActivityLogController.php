@@ -21,14 +21,12 @@ class ActivityLogController extends Controller
 
     public function store(Request $request)
     {
-        // PERBAIKAN: Tambahkan rule 'exists' agar tidak crash jika ID salah
         $validated = $request->validate([
             'action'        => 'required|string',
             'user_id'       => 'required|exists:users,id', // Harus ada di tabel users
             'vault_file_id' => 'nullable|exists:vault_files,id', // Harus ada di tabel vault_files
         ]);
 
-        // Otomatis ambil data dari request (lebih aman daripada manual di Postman)
         $log = ActivityLog::create([
             'action'        => $validated['action'],
             'user_id'       => $validated['user_id'],
