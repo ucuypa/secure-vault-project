@@ -8,62 +8,81 @@ use Illuminate\Http\Request;
 
 class ActivityLogController extends Controller
 {
-    public function index()
+    /**
+     * 1. GET: Menampilkan riwayat aktivitas MILIK USER yang sedang login saja.
+     */
+    public function index(Request $request)
     {
-        $logs = ActivityLog::latest()->get();
+        // Security Check: Hanya ambil log milik user yang login
+        $logs = ActivityLog::where('user_id', $request->user()->id)
+                            ->latest()
+                            ->get();
 
         return response()->json([
             'success' => true,
-            'message' => 'List Data Activity Logs',
+            'message' => 'Your Activity Logs retrieved successfully.',
             'data'    => $logs
         ], 200);
     }
 
+    /**
+     * 2. POST: Mencatat log baru (Otomatis menggunakan ID user yang login).
+     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'action'        => 'required|string',
-            'user_id'       => 'required|exists:users,id', // Harus ada di tabel users
-            'vault_file_id' => 'nullable|exists:vault_files,id', // Harus ada di tabel vault_files
+        $request->validate([
+            'action'        => 'required|string|max:255',
+            'vault_file_id' => 'nullable|exists:vault_files,id',
         ]);
 
+        // Security logic: Ambil IP dan User Agent secara otomatis dari sistem
         $log = ActivityLog::create([
-            'action'        => $validated['action'],
-            'user_id'       => $validated['user_id'],
-            'vault_file_id' => $validated['vault_file_id'],
+            'user_id'       => $request->user()->id, // Mengambil ID dari token Sanctum
+            'vault_file_id' => $request->vault_file_id,
+            'action'        => $request->action,
             'ip_address'    => $request->ip(),
             'user_agent'    => $request->userAgent(),
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Log berhasil dibuat',
+            'message' => 'Activity logged successfully.',
             'data'    => $log
         ], 201);
     }
 
-    public function update(Request $request, string $id)
+    /**
+     * 3. GET: Show specific log (dengan pengecekan kepemilikan).
+     */
+    public function show(Request $request, $id)
     {
-        $log = ActivityLog::findOrFail($id);
-        
-        // Batasi apa yang boleh diubah, biasanya hanya action/catatan saja
-        $log->update($request->only(['action']));
+        $log = ActivityLog::where('user_id', $request->user()->id)->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Status log berhasil diubah',
-            'data'    => $log
-        ], 200);
+        return response()->json(['success' => true, 'data' => $log]);
     }
 
-    public function destroy(string $id)
+    /**
+     * 4. PUT: Update log (Biasanya hanya untuk menambahkan catatan/remarks).
+     */
+    public function update(Request $request, $id)
     {
-        $log = ActivityLog::findOrFail($id);
+        $log = ActivityLog::where('user_id', $request->user()->id)->findOrFail($id);
+
+        $request->validate(['action' => 'required|string']);
+
+        $log->update(['action' => $request->action]);
+
+        return response()->json(['success' => true, 'message' => 'Log updated.']);
+    }
+
+    /**
+     * 5. DELETE: Menghapus log (hanya milik sendiri).
+     */
+    public function destroy(Request $request, $id)
+    {
+        $log = ActivityLog::where('user_id', $request->user()->id)->findOrFail($id);
         $log->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Log berhasil dihapus'
-        ], 200);
+        return response()->json(['success' => true, 'message' => 'Log deleted.']);
     }
 }

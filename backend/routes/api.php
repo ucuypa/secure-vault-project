@@ -21,6 +21,19 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::apiResource('files', VaultFileController::class);
-Route::apiResource('logs', ActivityLogController::class);
-Route::apiResource('users', UserController::class);
+Route::middleware('auth:sanctum')->group(function () {
+    // Route Download
+    Route::get('files/{id}/download', [VaultFileController::class, 'download']);
+    
+    // Resource CRUD
+    Route::apiResource('files', VaultFileController::class);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Resource Vault Files
+    Route::get('files/{id}/download', [VaultFileController::class, 'download']);
+    Route::apiResource('files', VaultFileController::class);
+
+    // Resource Activity Logs
+    Route::apiResource('logs', ActivityLogController::class);
+});

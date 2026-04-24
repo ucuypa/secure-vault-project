@@ -1,24 +1,16 @@
 <template>
-  <div class="vault-container">
-    <h1>🔒 Secure Vault Dashboard</h1>
-    <p>Vue.js is officially installed and running!</p>
+  <div id="app">
+    <router-view />
   </div>
 </template>
 
 <script setup>
-// We will put the secure file upload logic here later!
+// Tidak perlu logika berat di sini
 </script>
 
-<style scoped>
-.vault-container {
-  text-align: center;
-  padding: 50px;
-  font-family: sans-serif;
-  background-color: #1a1a1a;
-  color: #ffffff;
-  min-height: 100vh;
-}
-h1 {
-  color: #42b883;
+<style>
+/* Reset style atau font global jika diperlukan */
+body {
+  @apply bg-gray-100;
 }
 </style>
