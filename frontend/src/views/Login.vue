@@ -1,40 +1,43 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-    <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-indigo-600 p-8 text-white text-center">
-        <div class="inline-block p-3 bg-indigo-500 rounded-full mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
-        <h1 class="text-2xl font-bold">SECURE VAULT</h1>
-        <p class="text-indigo-100 text-sm">Enter credentials to unlock your data</p>
-      </div>
+  <div class="login-page">
+    <span class="page-label">Login</span>
+    <div class="login-card">
+      <h1 class="welcome-title">Welcome back.</h1>
 
-      <div class="p-8">
-        <form @submit.prevent="handleLogin" class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700">Email Address</label>
-            <input v-model="form.email" type="email" required placeholder="yusuf@ub.ac.id" 
-              class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
+      <form @submit.prevent="handleLogin" class="login-form">
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <input
+            v-model="form.email"
+            type="email"
+            required
+            class="field-input"
+          />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <input
+            v-model="form.password"
+            type="password"
+            required
+            class="field-input"
+          />
+          <div class="forgot-wrapper">
+            <a href="#" class="forgot-link">Forgotten your password?</a>
           </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700">Security Password</label>
-            <input v-model="form.password" type="password" required placeholder="••••••••" 
-              class="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all">
-          </div>
-          
-          <button type="submit" :disabled="loading"
-            class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-lg disabled:opacity-50 transition-all">
-            {{ loading ? 'Verifying...' : 'Unlock Vault' }}
+        </div>
+
+        <div class="bottom-section">
+          <p class="register-text">
+            Don't have an account?
+            <router-link to="/register" class="register-link">Register</router-link>
+          </p>
+          <button type="submit" :disabled="loading" class="login-btn">
+            {{ loading ? 'Logging in...' : 'Login' }}
           </button>
-        </form>
-
-        <div class="mt-6 text-center text-sm">
-          <span class="text-gray-500">Need a secure account?</span>
-          <router-link to="/register" class="ml-2 text-indigo-600 font-bold hover:underline">Register Now</router-link>
         </div>
-      </div>
+      </form>
     </div>
   </div>
 </template>
@@ -54,9 +57,169 @@ const handleLogin = async () => {
     await authService.login(form.value);
     router.push('/dashboard');
   } catch (error) {
-    alert(error.response?.data?.message || 'Access Denied: Invalid Credentials');
+    alert(error.response?.data?.message || 'Invalid credentials');
   } finally {
     loading.value = false;
   }
 };
 </script>
+
+<style scoped>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.login-page {
+  min-height: 100vh;
+  background-color: var(--bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.page-label {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.login-card {
+  background-color: var(--bg-card);
+  border-radius: 12px;
+  padding: 56px 40px; 
+  width: 100%;
+  max-width: 380px; 
+  min-height: 630px; 
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+  gap: 32px;
+}
+
+.welcome-title {
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--text-primary);
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.field-input {
+  width: 100%;
+  height: 38px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.field-input:focus {
+  border-color: var(--color-primary);
+}
+
+.forgot-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.forgot-link {
+  font-size: 12px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.forgot-link:hover {
+  color: var(--color-primary);
+}
+
+.bottom-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.register-text {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.register-link {
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  margin-left: 2px;
+  transition: color 0.15s ease;
+}
+
+.register-link:hover {
+  color: var(--color-primary);
+}
+
+.login-btn {
+  width: 100%;
+  height: 42px;
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.login-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.login-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+</style>
