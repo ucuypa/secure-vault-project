@@ -27,18 +27,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Route Download
-    Route::get('files/{id}/download', [VaultFileController::class, 'download']);
-    
-    // Resource CRUD
-    Route::apiResource('files', VaultFileController::class);
-});
+    // API untuk melihat daftar file milir user
+    Route::get('/files', [VaultFileController::class, 'index']);
 
-Route::middleware('auth:sanctum')->group(function () {
-    // Resource Vault Files
-    Route::get('files/{id}/download', [VaultFileController::class, 'download']);
-    Route::apiResource('files', VaultFileController::class);
-
-    // Resource Activity Logs
-    Route::apiResource('logs', ActivityLogController::class);
+    // API untuk upload file dan enkripsi file baru
+    Route::post('/files', [VaultFileController::class, 'store']);
 });

@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\VaultFile;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Strong;
 
 class VaultFileController extends Controller
 {
@@ -16,7 +17,7 @@ class VaultFileController extends Controller
      */
     public function index(Request $request)
     {
-        $files = VaultFile::where('user_id', $request->user()->id)->get();
+        $files = VaultFile::where('user_id', $request->user()->id)->latest()->get();
         
         return response()->json([
             'success' => true,
@@ -29,35 +30,41 @@ class VaultFileController extends Controller
      */
     public function store(Request $request)
     {
+        // 1. Validate Input
         $request->validate([
             'file' => 'required|file|max:10240', // Max 10MB
         ]);
 
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();
+        $mimeType = $file->getClientMimeType();
+        $fileSize = $file->getSize();
+
+        // 2. Extract Raw Data
+        // Baca seluruh file content ke dalam bentuk string/byte
         $fileContent = file_get_contents($file->getRealPath());
 
-        // Security Logic: Hashing & Encryption
+        // 3. Encrypt Data
         $hash = hash('sha256', $fileContent);
-        $encryptedContent = encrypt($fileContent); 
-        
-        $fileName = Str::uuid() . '.enc';
-        Storage::put('vault/' . $fileName, $encryptedContent);
+        $encryptedContent = encrypt($fileContent);
 
+        // 4. Generate Unique Path & Store Encrypted File
+        $fileName = Str::uuid() . '.enc';
+        $encryptedPath = 'vault_files/' . $fileName;
+
+        Storage::put($encryptedPath, $encryptedContent);
+
+        // 5. Save Metadata to Database
         $vaultFile = VaultFile::create([
-            'user_id'        => $request->user()->id, // Ambil ID dari Token
-            'original_name'  => $originalName,
-            'encrypted_path' => 'vault/' . $fileName,
-            'file_hash'      => $hash,
-            'file_size'      => $file->getSize(),
-            'mime_type'      => $file->getClientMimeType(),
+            'user_id' => $request->user()->id,
+            'original_name' => $originalName,
+            'encrypted_path' => $encryptedPath,
+            'file_hash' => $hash,
+            'file_size' => $fileSize,
+            'mime_type' => $mimeType,
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'File secured and linked to your account.',
-            'data'    => $vaultFile
-        ], 201);
+        return response()->json(['success' => true, 'message' => 'File uploaded successfully.', 'data' => $vaultFile], 201);
     }
 
     /**

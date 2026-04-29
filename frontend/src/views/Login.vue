@@ -1,6 +1,5 @@
 <template>
   <div class="login-page">
-    <span class="page-label">Login</span>
     <div class="login-card">
       <h1 class="welcome-title">Welcome back.</h1>
 

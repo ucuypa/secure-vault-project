@@ -1,6 +1,5 @@
 <template>
   <div class="register-page">
-    <span class="page-label">Register</span>
     <div class="register-card">
       <h1 class="welcome-title">Create Account.</h1>
 
