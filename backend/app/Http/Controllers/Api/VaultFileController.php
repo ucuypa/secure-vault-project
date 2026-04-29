@@ -18,7 +18,7 @@ class VaultFileController extends Controller
     public function index(Request $request)
     {
         $files = VaultFile::where('user_id', $request->user()->id)->latest()->get();
-        
+
         return response()->json([
             'success' => true,
             'data' => $files
@@ -30,6 +30,22 @@ class VaultFileController extends Controller
      */
     public function store(Request $request)
     {
+        // Jika request memiliki 'name' dan bukan 'file', berarti ini pembuatan folder
+        if ($request->has('name') && !$request->hasFile('file')) {
+            $request->validate(['name' => 'required|string|max:255']);
+
+            $folder = VaultFile::create([
+                'user_id'       => $request->user()->id,
+                'original_name' => $request->name,
+                'mime_type'     => 'directory', // Penanda bahwa ini adalah folder
+                'encrypted_path' => 'none',      // Folder tidak memiliki path file fisik
+                'file_size'     => 0,
+                'file_hash'     => 'none',
+            ]);
+
+            return response()->json(['success' => true, 'data' => $folder], 201);
+        }
+        
         // 1. Validate Input
         $request->validate([
             'file' => 'required|file|max:10240', // Max 10MB

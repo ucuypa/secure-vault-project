@@ -1,6 +1,7 @@
 <template>
   <div class="register-page">
     <div class="register-card">
+      <img src="/padlockwebdev.svg" alt="Logo" class="logo" />
       <h1 class="welcome-title">Create Account.</h1>
 
       <form @submit.prevent="handleRegister" class="register-form">
@@ -218,5 +219,18 @@ const handleRegister = async () => {
 .register-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.logo {
+  width: 64px;         /* Sesuaikan ukuran */
+  height: auto;
+  margin: 0 auto;      /* Membuat gambar ke tengah secara horizontal */
+  display: block;      /* Menghilangkan whitespace di bawah gambar */
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1)); /* Sedikit efek glowing */
+}
+
+.login-card {
+  /* ... gaya yang sudah ada ... */
+  padding-top: 40px;   /* Sesuaikan padding atas agar tidak terlalu mepet logo */
 }
 </style>

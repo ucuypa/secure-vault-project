@@ -1,6 +1,7 @@
 <template>
   <div class="login-page">
     <div class="login-card">
+      <img src="/padlockwebdev.svg" alt="Logo" class="logo" />
       <h1 class="welcome-title">Welcome back.</h1>
 
       <form @submit.prevent="handleLogin" class="login-form">
@@ -68,6 +69,19 @@ const handleLogin = async () => {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+.logo {
+  width: 64px;         /* Sesuaikan ukuran */
+  height: auto;
+  margin: 0 auto;      /* Membuat gambar ke tengah secara horizontal */
+  display: block;      /* Menghilangkan whitespace di bawah gambar */
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1)); /* Sedikit efek glowing */
+}
+
+.login-card {
+  /* ... gaya yang sudah ada ... */
+  padding-top: 40px;   /* Sesuaikan padding atas agar tidak terlalu mepet logo */
 }
 
 .login-page {
