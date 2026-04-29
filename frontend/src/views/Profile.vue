@@ -102,7 +102,7 @@
                   <div class="form-group">
                     <label>Email Address</label>
                     <input v-model="profileForm.email" type="email" class="form-control disabled" disabled />
-                    <p class="field-hint">Email is managed by organization.</p>
+                    <p class="field-hint"></p>
                   </div>
                 </div>
               </div>
