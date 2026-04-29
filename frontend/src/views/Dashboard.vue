@@ -3,22 +3,25 @@
 
     <aside class="sidebar-iconic">
       <div class="icon-brand">
-        <Settings class="icon" />
+        <router-link to="/dashboard" class="nav-item active">
+          <img src="/padlockwebdev.svg" alt="Logo" class="logo" />
+        </router-link>
       </div>
       <nav class="icon-nav">
-        <router-link to="/dashboard" class="nav-item active">
+        <div class="nav-item" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')">
           <HomeIcon class="icon" />
           <span>Home</span>
-        </router-link>
-        <router-link to="/dashboard" class="nav-item">
+        </div>
+
+        <div class="nav-item" :class="{ active: currentFilter === 'folders' }" @click="setFilter('folders')">
           <Folder class="icon" />
           <span>Folder</span>
-        </router-link>
-        <router-link to="/profile" class="nav-item">
-          <User class="icon" />
-          <span>Profile</span>
-        </router-link>
+        </div>
       </nav>
+      <router-link to="/profile" class="nav-item">
+        <User class="icon" />
+        <span>Profile</span>
+      </router-link>
     </aside>
 
     <aside class="sidebar-menu">
@@ -51,7 +54,7 @@
 
       <section class="content-area">
         <div class="content-header">
-          <h1 class="page-title">All Files</h1>
+          <h1 class="page-title">{{ currentFilter === 'folders' ? 'Folders' : 'All Files' }}</h1>
           <div class="action-buttons">
             <button @click="triggerFileUpload" :disabled="isUploading" class="btn-new">
               <Plus v-if="!isUploading" class="icon-small" /> {{ isUploading ? ' Encrypting...' : 'New' }}
@@ -75,7 +78,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="file in files" :key="file.id" class="file-row">
+              <tr v-for="file in filteredFiles" :key="file.id" class="file-row">
                 <td>
                   <div class="name-wrapper">
                     <component :is="getFileIcon(file.mime_type)" class="icon file-icon"
@@ -135,6 +138,7 @@ import {
   FileText, FileImage, FileCode, File as FileGeneric,
   User, X
 } from 'lucide-vue-next';
+// import { getFileBasedRouteName } from 'vue-router/dist/unplugin/index.cjs';
 
 const files = ref([]);
 const fileInput = ref(null);
@@ -249,6 +253,24 @@ const submitFolder = async () => {
   }
 };
 
+// State untuk menyimpan filter yang sedang aktif
+const currentFilter = ref('all'); // Bisa berisi 'all' atau 'folders'
+
+// Computed property: Kacamata otomatis untuk melihat data
+const filteredFiles = computed(() => {
+  if (currentFilter.value === 'folders') {
+    // Hanya kembalikan data yang bertipe directory/folder
+    return files.value.filter(file => file.mime_type === 'directory');
+  }
+  // Jika 'all', kembalikan semua data
+  return files.value;
+});
+
+// Fungsi untuk mengganti filter saat tombol sidebar ditekan
+const setFilter = (filterType) => {
+  currentFilter.value = filterType;
+};
+
 onMounted(fetchFiles);
 </script>
 
@@ -259,7 +281,8 @@ onMounted(fetchFiles);
 
 
 /* Menjaga tampilan nav-item dan avatar tetap bersih */
-.nav-item, .user-avatar {
+.nav-item,
+.user-avatar {
   text-decoration: none;
   cursor: pointer;
 }
@@ -268,6 +291,7 @@ onMounted(fetchFiles);
 .nav-item {
   color: inherit;
 }
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -310,9 +334,8 @@ onMounted(fetchFiles);
 }
 
 .icon-brand {
-  background-color: var(--text-muted);
-  padding: 8px;
-  border-radius: 8px;
+  padding: 2px;
+  border-radius: 5px;
   cursor: pointer;
 }
 
