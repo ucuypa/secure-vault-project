@@ -24,7 +24,7 @@
             class="field-input"
           />
           <div class="forgot-wrapper">
-            <a href="#" class="forgot-link">Forgotten your password?</a>
+            <router-link to="/ForgetPassword" class="forgot-link">Forgotten your password?</router-link>
           </div>
         </div>
 
