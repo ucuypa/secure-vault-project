@@ -6,14 +6,18 @@
         <Settings class="icon" />
       </div>
       <nav class="icon-nav">
-        <div class="nav-item active">
+        <router-link to="/dashboard" class="nav-item active">
           <HomeIcon class="icon" />
           <span>Home</span>
-        </div>
-        <div class="nav-item">
+        </router-link>
+        <router-link to="/dashboard" class="nav-item">
           <Folder class="icon" />
           <span>Folder</span>
-        </div>
+        </router-link>
+        <router-link to="/profile" class="nav-item">
+          <User class="icon" />
+          <span>Profile</span>
+        </router-link>
       </nav>
     </aside>
 
@@ -38,9 +42,11 @@
           </div>
         </div>
 
-        <div class="user-avatar">
-          {{ userInitial }}
-        </div>
+        <router-link to="/profile" style="text-decoration: none; color: inherit;">
+          <div class="user-avatar">
+            {{ userInitial }}
+          </div>
+        </router-link>
       </header>
 
       <section class="content-area">
@@ -100,7 +106,8 @@ import axios from '../api/axios';
 import { 
   Settings, Home as HomeIcon, Folder, LayoutGrid, Search, Plus, 
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
-  FileText, FileImage, FileCode, File as FileGeneric
+  FileText, FileImage, FileCode, File as FileGeneric,
+  User
 } from 'lucide-vue-next';
 
 const files = ref([]);
@@ -187,6 +194,18 @@ onMounted(fetchFiles);
 /* =========================================
    CSS VARIABLES FOR DARK THEME
 ========================================= */
+
+
+/* Menjaga tampilan nav-item dan avatar tetap bersih */
+.nav-item, .user-avatar {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Pastikan nav-item tidak berubah warna jadi biru link */
+.nav-item {
+  color: inherit;
+}
 * {
   box-sizing: border-box;
   margin: 0;
