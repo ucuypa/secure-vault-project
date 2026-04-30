@@ -1,10 +1,17 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <img src="/padlockwebdev.svg" alt="Logo" class="logo" />
-      <h1 class="welcome-title">Welcome back.</h1>
+  <div class="forget-page">
+    <span class="page-label">Forget Password</span>
+    
+    <div class="forget-card">
+      <button @click="router.push('/login')" class="close-btn" aria-label="Close">
+        ✕
+      </button>
 
-      <form @submit.prevent="handleLogin" class="login-form">
+      <img src="/padlockwebdev.svg" alt="Logo" class="logo" />
+      
+      <h1 class="welcome-title">Reset your password.</h1>
+
+      <form @submit.prevent="handleReset" class="forget-form">
         <div class="field-group">
           <label class="field-label">Email</label>
           <input
@@ -16,25 +23,28 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">Password</label>
+          <label class="field-label">New Password</label>
           <input
-            v-model="form.password"
+            v-model="form.newPassword"
             type="password"
             required
             class="field-input"
           />
-          <div class="forgot-wrapper">
-            <router-link to="/ForgetPassword" class="forgot-link">Forgotten your password?</router-link>
-          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Confirm Password</label>
+          <input
+            v-model="form.confirmPassword"
+            type="password"
+            required
+            class="field-input"
+          />
         </div>
 
         <div class="bottom-section">
-          <p class="register-text">
-            Don't have an account?
-            <router-link to="/register" class="register-link">Register</router-link>
-          </p>
-          <button type="submit" :disabled="loading" class="login-btn">
-            {{ loading ? 'Logging in...' : 'Login' }}
+          <button type="submit" :disabled="loading" class="submit-btn">
+            {{ loading ? 'Confirming...' : 'Confirm' }}
           </button>
         </div>
       </form>
@@ -44,20 +54,30 @@
 
 <script setup>
 import { ref } from 'vue';
-import authService from '../api/auth';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const loading = ref(false);
-const form = ref({ email: '', password: '' });
+const form = ref({ email: '', newPassword: '', confirmPassword: '' });
 
-const handleLogin = async () => {
+const handleReset = async () => {
+  if (form.value.newPassword !== form.value.confirmPassword) {
+    alert("Passwords do not match!");
+    return;
+  }
+
   loading.value = true;
   try {
-    await authService.login(form.value);
-    router.push('/dashboard');
+    // This is where the API call will go
+    // await authService.resetPassword(form.value);
+    
+    // Simulating a network request for now
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    
+    alert('Password successfully reset!');
+    router.push('/login');
   } catch (error) {
-    alert(error.response?.data?.message || 'Invalid credentials');
+    alert(error.response?.data?.message || 'Failed to reset password');
   } finally {
     loading.value = false;
   }
@@ -71,26 +91,14 @@ const handleLogin = async () => {
   padding: 0;
 }
 
-.logo {
-  width: 64px;         /* Sesuaikan ukuran */
-  height: auto;
-  margin: 0 auto;      /* Membuat gambar ke tengah secara horizontal */
-  display: block;      /* Menghilangkan whitespace di bawah gambar */
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1)); /* Sedikit efek glowing */
-}
-
-.login-card {
-  /* ... gaya yang sudah ada ... */
-  padding-top: 40px;   /* Sesuaikan padding atas agar tidak terlalu mepet logo */
-}
-
-.login-page {
+.forget-page {
   min-height: 100vh;
   background-color: var(--bg-main);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  padding: 20px;
 }
 
 .page-label {
@@ -103,17 +111,47 @@ const handleLogin = async () => {
   letter-spacing: 0.01em;
 }
 
-.login-card {
+.forget-card {
   background-color: var(--bg-card);
   border-radius: 12px;
-  padding: 56px 40px; 
+  padding: 48px 40px; 
   width: 100%;
   max-width: 380px; 
-  min-height: 630px; 
+  min-height: 630px;
   display: flex;
   flex-direction: column;
   justify-content: center; 
   gap: 32px;
+  position: relative; 
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
+  border-color: transparent;
+}
+
+.logo {
+  width: 64px;        
+  height: auto;
+  margin: 0 auto;      
+  display: block;      
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1)); 
 }
 
 .welcome-title {
@@ -123,9 +161,10 @@ const handleLogin = async () => {
   text-align: center;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  margin-top: 4px;
 }
 
-.login-form {
+.forget-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -162,54 +201,14 @@ const handleLogin = async () => {
   border-color: var(--color-primary);
 }
 
-.forgot-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4px;
-}
-
-.forgot-link {
-  font-size: 12px;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--text-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.forgot-link:hover {
-  color: var(--color-primary);
-}
-
 .bottom-section {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 
-.register-text {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-secondary);
-}
-
-.register-link {
-  font-weight: 700;
-  color: var(--text-primary);
-  text-decoration: none;
-  margin-left: 2px;
-  transition: color 0.15s ease;
-}
-
-.register-link:hover {
-  color: var(--color-primary);
-}
-
-.login-btn {
+.submit-btn {
   width: 100%;
   height: 42px;
   background-color: var(--color-primary);
@@ -223,15 +222,15 @@ const handleLogin = async () => {
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.login-btn:hover:not(:disabled) {
+.submit-btn:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
 }
 
-.login-btn:active:not(:disabled) {
+.submit-btn:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.login-btn:disabled {
+.submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
