@@ -17,31 +17,79 @@
           <Folder class="icon" />
           <span>Folder</span>
         </div>
+
+        <div class="nav-item">
+          <Bell class="icon" />
+          <span>Activity</span>
+        </div>
+
+        <div class="nav-item">
+          <router-link to="/profile" class="nav-item">
+            <User class="icon" />
+            <span>Profile</span>
+          </router-link>
+        </div>
       </nav>
-      <router-link to="/profile" class="nav-item">
-        <User class="icon" />
-        <span>Profile</span>
-      </router-link>
     </aside>
 
     <aside class="sidebar-menu">
       <h2 class="menu-title">Home</h2>
-      <div class="menu-item active">
+
+      <div class="menu-item" :class="{ active: currentFilter === 'all' }" @click="setFilter('all')">
         <LayoutGrid class="icon-small" />
         <span>All Files</span>
+      </div>
+
+      <div class="menu-item">
+        <Users class="icon-small" />
+        <span>Photos</span>
+      </div>
+
+      <div class="menu-item">
+        <Trash2 class="icon-small" />
+        <span>Documents</span>
+      </div>
+
+      <div class="menu-item">
+        <Trash2 class="icon-small" />
+        <span>Videos</span>
+      </div>
+
+      <div class="menu-item">
+        <Trash2 class="icon-small" />
+        <span>Others</span>
+      </div>
+
+      <!-- Quick Access Section -->
+      <div class="quick-access-section">
+        <div class="section-header">
+          <span class="section-label-bold">Quick access</span>
+          <button class="btn-icon-tiny">
+            <Plus class="icon-tiny" />
+          </button>
+        </div>
+
+        <!-- Collapsible Items -->
+        <div class="collapsible-wrapper">
+          <div class="menu-item collapsible-header">
+            <ChevronDown class="icon-tiny" />
+            <span>Starred</span>
+          </div>
+
+          <div class="menu-item collapsible-header">
+            <ChevronDown class="icon-tiny" />
+            <span>Untitled</span>
+          </div>
+        </div>
       </div>
     </aside>
 
     <main class="main-content">
       <header class="top-header">
         <div class="header-left">
-          <button @click="triggerFileUpload" class="btn-new">
-            <Plus class="icon-small" /> New
-          </button>
-
           <div class="search-wrapper">
             <Search class="search-icon" />
-            <input type="text" placeholder="Search" class="search-input" />
+            <input v-model="searchQuery" type="text" placeholder="Search files and folders..." class="search-input" />
           </div>
         </div>
 
@@ -54,6 +102,7 @@
 
       <section class="content-area">
         <div class="content-header">
+          <!-- Tombol Back dihapus karena Dashboard adalah root -->
           <h1 class="page-title">{{ currentFilter === 'folders' ? 'Folders' : 'All Files' }}</h1>
           <div class="action-buttons">
             <button @click="triggerFileUpload" :disabled="isUploading" class="btn-new">
@@ -78,7 +127,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="file in filteredFiles" :key="file.id" class="file-row">
+              <tr v-for="file in filteredFiles" :key="file.id" class="file-row" @click="openFolder(file)"
+                style="cursor: pointer;">
                 <td>
                   <div class="name-wrapper">
                     <component :is="getFileIcon(file.mime_type)" class="icon file-icon"
@@ -131,16 +181,19 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router'; // Import useRouter
 import axios from '../api/axios';
 import {
   Settings, Home as HomeIcon, Folder, LayoutGrid, Search, Plus,
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
-  User, X
-} from 'lucide-vue-next';
-// import { getFileBasedRouteName } from 'vue-router/dist/unplugin/index.cjs';
+  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight
+} from 'lucide-vue-next'; // Hapus ArrowLeft dari import karena sudah tidak dipakai
 
+const router = useRouter(); // Inisialisasi router
 const files = ref([]);
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+const userInitial = computed(() => user.name ? user.name[0].toUpperCase() : 'U');
 const fileInput = ref(null);
 const isUploading = ref(false);
 
@@ -154,7 +207,9 @@ const triggerFileUpload = () => {
 
 const fetchFiles = async () => {
   try {
-    const response = await axios.get('/files');
+    const response = await axios.get('/files', {
+      params: { parent_id: null } // Dashboard selalu memuat file root (parent_id: null)
+    });
     files.value = response.data.data;
   } catch (error) {
     console.error("Failed to fetch files", error);
@@ -165,33 +220,31 @@ const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Check file size limit
   if (file.size > 10 * 1024 * 1024) {
     alert('File size exceeds 10MB limit.');
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
     return;
   }
 
   const formData = new FormData();
   formData.append('file', file);
+  // Upload dari Dashboard selalu ke root
 
   isUploading.value = true;
 
   try {
-    // Send to laravel backend
     const response = await axios.post('/files', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
     alert('Success: ' + response.data.message);
-    fetchFiles(); // Refresh file list
+    fetchFiles();
   } catch (error) {
-    // Error handling
     console.error('Upload error:', error);
     alert('Upload failed. Make sure file is valid and try again.');
   } finally {
     isUploading.value = false;
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
   }
 };
 
@@ -224,7 +277,7 @@ const formatSize = (bytes) => {
 };
 
 const openFolderModal = () => {
-  newFolderName.value = ''; // Kosongkan inputan lama
+  newFolderName.value = '';
   showFolderModal.value = true;
 };
 
@@ -233,18 +286,18 @@ const closeFolderModal = () => {
   newFolderName.value = '';
 };
 
-// Fungsi ini menggantikan fungsi createFolder yang lama
 const submitFolder = async () => {
   if (!newFolderName.value.trim()) return;
 
   isCreatingFolder.value = true;
   try {
     await axios.post('/files', {
-      name: newFolderName.value.trim()
+      name: newFolderName.value.trim(),
+      parent_id: null // Buat folder dari Dashboard selalu di root
     });
 
-    fetchFiles(); // Refresh tabel
-    closeFolderModal(); // Tutup modal otomatis jika sukses
+    fetchFiles();
+    closeFolderModal();
   } catch (error) {
     console.error("Error creating folder:", error);
     alert("Failed to create folder.");
@@ -253,22 +306,44 @@ const submitFolder = async () => {
   }
 };
 
-// State untuk menyimpan filter yang sedang aktif
-const currentFilter = ref('all'); // Bisa berisi 'all' atau 'folders'
+const currentFilter = ref('all');
 
-// Computed property: Kacamata otomatis untuk melihat data
-const filteredFiles = computed(() => {
-  if (currentFilter.value === 'folders') {
-    // Hanya kembalikan data yang bertipe directory/folder
-    return files.value.filter(file => file.mime_type === 'directory');
-  }
-  // Jika 'all', kembalikan semua data
-  return files.value;
-});
-
-// Fungsi untuk mengganti filter saat tombol sidebar ditekan
 const setFilter = (filterType) => {
   currentFilter.value = filterType;
+};
+
+const folderList = computed(() => {
+  return files.value.filter(file => file.mime_type === 'directory');
+});
+
+const searchQuery = ref('');
+
+const filteredFiles = computed(() => {
+  let result = files.value;
+
+  if (currentFilter.value === 'folders') {
+    result = result.filter(file => file.mime_type === 'directory');
+  }
+
+  if (searchQuery.value.trim() !== '') {
+    const keyword = searchQuery.value.toLowerCase();
+    result = result.filter(file =>
+      file.original_name.toLowerCase().includes(keyword)
+    );
+  }
+
+  return result;
+});
+
+// Arahkan ke URL folder baru saat diklik ganda
+const openFolder = (folder) => {
+  if (folder.mime_type !== 'directory') return;
+
+  // Pindah halaman sambil membawa ID (params) dan Nama Folder (query)
+  router.push({
+    path: `/folder/${folder.id}`,
+    query: { name: folder.original_name } // Ini kuncinya!
+  });
 };
 
 onMounted(fetchFiles);
@@ -279,15 +354,12 @@ onMounted(fetchFiles);
    CSS VARIABLES FOR DARK THEME
 ========================================= */
 
-
-/* Menjaga tampilan nav-item dan avatar tetap bersih */
 .nav-item,
 .user-avatar {
   text-decoration: none;
   cursor: pointer;
 }
 
-/* Pastikan nav-item tidak berubah warna jadi biru link */
 .nav-item {
   color: inherit;
 }
@@ -323,7 +395,7 @@ onMounted(fetchFiles);
    SIDEBARS
 ========================================= */
 .sidebar-iconic {
-  width: 64px;
+  width: 72px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -339,16 +411,26 @@ onMounted(fetchFiles);
   cursor: pointer;
 }
 
+.logo-placeholder {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
 .icon-nav {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
+  gap: 4px;
   align-items: center;
   color: var(--text-secondary);
   cursor: pointer;
@@ -361,37 +443,49 @@ onMounted(fetchFiles);
 }
 
 .nav-item span {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 500;
   margin-top: 4px;
 }
 
 .sidebar-menu {
-  width: 220px;
+  width: 260px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   padding: 24px 16px;
 }
 
 .menu-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   margin-bottom: 24px;
   padding: 0 8px;
+  color: var(--text-primary);
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
   gap: 12px;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .menu-item.active {
   background-color: var(--bg-hover);
   color: var(--text-primary);
+  font-weight: 500;
 }
 
 /* =========================================
@@ -534,14 +628,12 @@ onMounted(fetchFiles);
 .file-table {
   width: 100%;
   border-collapse: collapse;
-  /* Mencegah garis putus */
   text-align: left;
 }
 
 .file-table th,
 .file-table td {
   padding: 16px;
-  /* Memberi ruang seragam agar teks tidak mepet */
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -558,7 +650,6 @@ onMounted(fetchFiles);
 
 .file-row:hover td {
   background-color: var(--bg-sidebar);
-  /* Mengubah background seluruh sel saat dihover */
 }
 
 /* =========================================
@@ -568,7 +659,6 @@ onMounted(fetchFiles);
   display: flex;
   align-items: center;
   gap: 12px;
-  /* Jarak pas antara ikon dan nama file */
 }
 
 .file-name {
@@ -578,7 +668,6 @@ onMounted(fetchFiles);
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 400px;
-  /* Batasan agar nama panjang tidak merusak tabel */
 }
 
 .text-muted {
@@ -665,9 +754,7 @@ onMounted(fetchFiles);
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.6);
-  /* Latar belakang gelap transparan */
   backdrop-filter: blur(2px);
-  /* Efek blur ala macOS */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -717,7 +804,6 @@ onMounted(fetchFiles);
 
 .modal-input:focus {
   border-color: var(--bg-button);
-  /* Nyala kuning saat diklik */
 }
 
 .modal-footer {
@@ -766,5 +852,88 @@ onMounted(fetchFiles);
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* =========================================
+   SIDEBAR FOLDER SECTION
+========================================= */
+.folder-list-section {
+  margin-top: 32px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  padding: 0 8px;
+}
+
+.truncate-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* =========================================
+   QUICK ACCESS SECTION
+========================================= */
+.quick-access-section {
+  padding: 0 4px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 4px;
+}
+
+.section-label-bold {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.btn-icon-tiny {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-tiny:hover {
+  color: #ffffff;
+}
+
+.collapsible-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.collapsible-header {
+  gap: 8px;
+  padding: 8px;
+  font-size: 13px;
+  color: #dddddd;
+}
+
+.collapsible-content {
+  padding: 4px 8px 16px 28px;
+  /* Indentasi ke dalam */
+}
+
+.empty-drag-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 </style>

@@ -11,6 +11,7 @@ class VaultFile extends Model
 
     protected $fillable = [
         'user_id',
+        'parent_id',
         'original_name',
         'encrypted_path',
         'file_hash',

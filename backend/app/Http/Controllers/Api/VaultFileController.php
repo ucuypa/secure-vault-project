@@ -17,7 +17,9 @@ class VaultFileController extends Controller
      */
     public function index(Request $request)
     {
-        $files = VaultFile::where('user_id', $request->user()->id)->latest()->get();
+        $parentId = $request->query('parent_id');
+
+        $files = VaultFile::where('user_id', $request->user()->id)->where('parent_id', $parentId)->latest()->get();
 
         return response()->json([
             'success' => true,
@@ -36,6 +38,7 @@ class VaultFileController extends Controller
 
             $folder = VaultFile::create([
                 'user_id'       => $request->user()->id,
+                'parent_id'     => $request->parent_id,
                 'original_name' => $request->name,
                 'mime_type'     => 'directory', // Penanda bahwa ini adalah folder
                 'encrypted_path' => 'none',      // Folder tidak memiliki path file fisik
@@ -45,7 +48,7 @@ class VaultFileController extends Controller
 
             return response()->json(['success' => true, 'data' => $folder], 201);
         }
-        
+
         // 1. Validate Input
         $request->validate([
             'file' => 'required|file|max:10240', // Max 10MB
@@ -73,6 +76,7 @@ class VaultFileController extends Controller
         // 5. Save Metadata to Database
         $vaultFile = VaultFile::create([
             'user_id' => $request->user()->id,
+            'parent_id' => $request->parent_id,
             'original_name' => $originalName,
             'encrypted_path' => $encryptedPath,
             'file_hash' => $hash,
