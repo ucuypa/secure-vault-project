@@ -19,8 +19,10 @@
         </div>
 
         <div class="nav-item">
-          <Bell class="icon" />
-          <span>Activity</span>
+          <router-link to="/activity" class="nav-item" style="text-decoration: none;">
+            <Bell class="icon" />
+            <span>Activity</span>
+          </router-link>
         </div>
 
         <div class="nav-item">

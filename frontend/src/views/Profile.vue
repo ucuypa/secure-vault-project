@@ -3,31 +3,48 @@
     
     <aside class="sidebar-iconic">
       <div class="icon-brand">
-        <Settings class="icon" />
+        <router-link to="/dashboard" class="nav-item">
+          <img src="/padlockwebdev.svg" alt="Logo" />
+        </router-link>
       </div>
       <nav class="icon-nav">
-        <router-link to="/dashboard" class="nav-item">
-          <HomeIcon class="icon" />
-          <span>Home</span>
-        </router-link>
-        <router-link to="/dashboard" class="nav-item">
-          <Folder class="icon" />
-          <span>Folder</span>
-        </router-link>
-        <router-link to="/profile" class="nav-item active">
-          <User class="icon" />
-          <span>Profile</span>
-        </router-link>
+        <div class="nav-item">
+          <router-link to="/dashboard" class="nav-item" style="text-decoration: none;">
+            <HomeIcon class="icon" />
+            <span>Home</span>
+          </router-link>
+        </div>
+        <div class="nav-item">
+          <router-link to="/dashboard" class="nav-item" style="text-decoration: none;">
+            <Folder class="icon" />
+            <span>Folder</span>
+          </router-link>
+        </div>
+        <div class="nav-item">
+          <router-link to="/activity" class="nav-item" style="text-decoration: none;">
+            <Bell class="icon" />
+            <span>Activity</span>
+          </router-link>
+        </div>
+        <div class="nav-item active">
+          <router-link to="/profile" class="nav-item active" style="text-decoration: none;">
+            <User class="icon" />
+            <span>Profile</span>
+          </router-link>
+        </div>
       </nav>
     </aside>
 
     <aside class="sidebar-menu">
+      <h2 class="menu-title">Profile</h2>
+
       <div class="menu-nav-list">
         <div class="menu-item active">
           <User class="icon-small" />
           <span>My Account</span>
         </div>
-        <div class="divider-menu"></div>
+        <div style="height: 1px; background-color: var(--border-color); margin: 16px 0;"></div>
+        
         <div class="menu-item logout-item" @click="handleLogout">
           <LogOut class="icon-small" />
           <span>Logout</span>
@@ -36,21 +53,27 @@
     </aside>
 
     <main class="main-content">
+      
       <header class="top-header">
         <div class="header-left">
-          <h1 class="page-title">Profile Settings</h1>
-        </div>
-        <div class="header-right">
-          <div class="user-avatar-header">
-            <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-small" />
-            <span v-else>{{ userInitial }}</span>
+          <div class="search-wrapper">
+            <Search class="search-icon" />
+            <input type="text" placeholder="Search settings..." class="search-input" />
           </div>
+        </div>
+
+        <div class="user-avatar">
+          <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-small" />
+          <span v-else>{{ userInitial }}</span>
         </div>
       </header>
 
       <section class="content-area">
+        <div class="content-header">
+          <h1 class="page-title">Profile Settings</h1>
+        </div>
+
         <div class="profile-wrapper">
-          
           <div class="profile-main-card">
             <div class="profile-header-content">
               <div class="avatar-section-wrapper">
@@ -84,7 +107,7 @@
 
               <div class="user-info-brief">
                 <h2>{{ profileForm.name }}</h2>
-                <p>{{ profileForm.email }}</p>
+                <p class="text-muted">{{ profileForm.email }}</p>
                 <span class="status-badge">Personal Account</span>
               </div>
             </div>
@@ -102,7 +125,6 @@
                   <div class="form-group">
                     <label>Email Address</label>
                     <input v-model="profileForm.email" type="email" class="form-control disabled" disabled />
-                    <p class="field-hint"></p>
                   </div>
                 </div>
               </div>
@@ -128,8 +150,7 @@
               </div>
             </form>
           </div>
-
-          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -139,7 +160,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { 
-  Settings, Home as HomeIcon, Folder, User, 
+  Home as HomeIcon, Folder, User, Bell, Search,
   LogOut, Pencil, Trash2 
 } from 'lucide-vue-next';
 
@@ -208,78 +229,451 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-/* GLOBAL & VARIABLES */
+/* =========================================
+   EXACT COPY OF DASHBOARD CSS
+========================================= */
+.nav-item,
+.user-avatar {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-item {
+  color: inherit;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
 .dashboard-layout {
-  --bg-dark: #0f0f0f;
-  --bg-sidebar: #181818;
+  --bg-main: #121212;
+  --bg-sidebar: #1a1a1a;
+  --bg-hover: #2a2a2a;
+  --bg-button: #ffab00;
+  --bg-button-hover: #ffc107;
   --bg-card: #1e1e1e;
-  --border-color: #2a2a2a;
-  --color-primary: #ffab00;
-  --color-danger: #ff4444;
+  --border-color: #2e2e2e;
   --text-primary: #ffffff;
-  --text-secondary: #888888;
-  display: flex; height: 100vh; background-color: var(--bg-dark); color: var(--text-primary);
+  --text-secondary: #a0a0a0;
+  --text-muted: #6e6e6e;
+  --text-inverse: #000000;
+  --color-danger: #ef4444;
+
+  display: flex;
+  height: 100vh;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
 }
 
-/* SIDEBAR ICONIC - Perbaikan Warna Setting Ikon */
+/* Sidebars */
 .sidebar-iconic {
-  width: 64px; border-right: 1px solid var(--border-color); display: flex;
-  flex-direction: column; align-items: center; padding: 24px 0; gap: 40px; background-color: var(--bg-sidebar);
+  width: 72px;
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  gap: 32px;
 }
-.icon-brand { color: var(--text-primary); } /* Kembali ke Putih */
 
-.icon-nav { display: flex; flex-direction: column; gap: 24px; align-items: center; width: 100%; }
-.nav-item { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-secondary); text-decoration: none; font-size: 10px; }
-.nav-item.active { color: var(--text-primary); }
-.icon { width: 22px; height: 22px; }
-
-/* MAIN LAYOUT */
-.sidebar-menu { width: 240px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); padding: 24px 16px; }
-.main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-.top-header { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 1px solid var(--border-color); }
-.user-avatar-header { width: 32px; height: 32px; background: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; overflow: hidden; }
-.avatar-img-small { width: 100%; height: 100%; object-fit: cover; }
-
-/* PROFILE AVATAR SECTION */
-.profile-wrapper { max-width: 800px; margin: 40px auto; padding: 0 24px 60px; }
-.profile-main-card { background-color: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; }
-.profile-header-content { padding: 40px; display: flex; align-items: center; gap: 32px; }
-
-.avatar-section-wrapper { display: flex; align-items: center; gap: 20px; }
-
-.avatar-upload-box {
-  width: 90px; height: 90px; border-radius: 50%; overflow: hidden;
-  background-color: var(--color-primary); cursor: pointer; position: relative;
+.icon-brand {
+  padding: 2px;
+  border-radius: 5px;
+  cursor: pointer;
 }
-.profile-img-large { width: 100%; height: 100%; object-fit: cover; }
-.large-avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; }
-.avatar-hover-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.2s; }
-.avatar-upload-box:hover .avatar-hover-overlay { opacity: 1; }
 
-/* TOMBOL SAMPAH DI SAMPING */
-.btn-delete-photo-side {
-  background: #252525; border: 1px solid var(--border-color); color: var(--text-secondary);
-  padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px;
-  cursor: pointer; font-size: 12px; transition: 0.2s;
+.icon-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
 }
-.btn-delete-photo-side:hover { color: var(--color-danger); border-color: var(--color-danger); background: #2a1515; }
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.nav-item.active,
+.nav-item:hover {
+  color: var(--text-primary);
+}
+
+.nav-item span {
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.sidebar-menu {
+  width: 260px;
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  padding: 24px 16px;
+}
+
+.menu-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  padding: 0 8px;
+  color: var(--text-primary);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.menu-item.active {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.menu-item:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.logout-item:hover {
+  color: var(--color-danger);
+}
+
+/* Main Content & Header */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.top-header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+}
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+}
+
+.search-input {
+  width: 100%;
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 16px 8px 40px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--text-muted);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background-color: var(--bg-button);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+  color: var(--text-inverse);
+  overflow: hidden;
+}
+
+.avatar-img-small {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Content Area */
+.content-area {
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+/* Icons */
+.icon { width: 20px; height: 20px; }
+.icon-small { width: 16px; height: 16px; }
+.icon-white { width: 24px; height: 24px; color: #fff; }
 .icon-trash-action { width: 16px; height: 16px; }
 
-/* FORM STYLES */
-.profile-form-full { padding: 40px; }
-.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
-.form-group label { font-size: 13px; color: var(--text-secondary); }
-.form-control { background: #121212; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: #fff; outline: none; }
-.form-control:focus { border-color: var(--color-primary); }
-.disabled { opacity: 0.5; }
-.form-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
-.btn-primary { background: var(--color-primary); color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-.btn-secondary { background: transparent; border: 1px solid var(--border-color); color: #fff; padding: 12px 24px; border-radius: 8px; cursor: pointer; }
+/* =========================================
+   PROFILE SPECIFIC STYLES
+========================================= */
+.profile-wrapper {
+  max-width: 800px;
+}
 
-.hidden-input { display: none; }
-.menu-title { font-size: 18px; margin-bottom: 20px; }
-.menu-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 6px; color: var(--text-secondary); cursor: pointer; }
-.menu-item.active { background: #252525; color: #fff; }
-.logout-item:hover { color: var(--color-danger); }
+.profile-main-card {
+  background-color: var(--bg-sidebar);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.profile-header-content {
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.avatar-section-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar-upload-box {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: var(--bg-button);
+  cursor: pointer;
+  position: relative;
+}
+
+.profile-img-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.large-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-inverse);
+}
+
+.avatar-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.avatar-upload-box:hover .avatar-hover-overlay {
+  opacity: 1;
+}
+
+.btn-delete-photo-side {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: 0.2s;
+}
+
+.btn-delete-photo-side:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.user-info-brief h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.status-badge {
+  display: inline-block;
+  background-color: rgba(255, 171, 0, 0.15);
+  color: var(--bg-button);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 171, 0, 0.3);
+}
+
+.card-divider {
+  height: 1px;
+  background-color: var(--border-color);
+}
+
+/* FORM STYLES */
+.profile-form-full {
+  padding: 32px;
+}
+
+.section-subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.form-section {
+  margin-bottom: 32px;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.form-control {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--text-primary);
+  outline: none;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-control:focus {
+  border-color: var(--bg-button);
+}
+
+.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-primary {
+  background: var(--bg-button);
+  color: var(--text-inverse);
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--bg-button-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+}
+
+.hidden-input {
+  display: none;
+}
 </style>
