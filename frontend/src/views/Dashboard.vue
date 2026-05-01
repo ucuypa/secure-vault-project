@@ -40,23 +40,23 @@
         <span>All Files</span>
       </div>
 
-      <div class="menu-item">
-        <Users class="icon-small" />
+      <div class="menu-item" :class="{ active: currentFilter === 'photos' }" @click="setFilter('photos')">
+        <ImageIcon class="icon-small" />
         <span>Photos</span>
       </div>
 
-      <div class="menu-item">
-        <Trash2 class="icon-small" />
+      <div class="menu-item" :class="{ active: currentFilter === 'documents' }" @click="setFilter('documents')">
+        <FileText class="icon-small" />
         <span>Documents</span>
       </div>
 
-      <div class="menu-item">
-        <Trash2 class="icon-small" />
+      <div class="menu-item" :class="{ active: currentFilter === 'videos' }" @click="setFilter('videos')">
+        <Video class="icon-small" />
         <span>Videos</span>
       </div>
 
-      <div class="menu-item">
-        <Trash2 class="icon-small" />
+      <div class="menu-item" :class="{ active: currentFilter === 'others' }" @click="setFilter('others')">
+        <File class="icon-small" />
         <span>Others</span>
       </div>
 
@@ -187,7 +187,7 @@ import {
   Settings, Home as HomeIcon, Folder, LayoutGrid, Search, Plus,
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
-  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight
+  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File,
 } from 'lucide-vue-next'; // Hapus ArrowLeft dari import karena sudah tidak dipakai
 
 const router = useRouter(); // Inisialisasi router
@@ -321,16 +321,59 @@ const searchQuery = ref('');
 const filteredFiles = computed(() => {
   let result = files.value;
 
+  // --- 1. FILTER KATEGORI SIDEBAR ---
   if (currentFilter.value === 'folders') {
     result = result.filter(file => file.mime_type === 'directory');
   }
+  else if (currentFilter.value === 'photos') {
+    result = result.filter(file => file.mime_type.includes('image'));
+  }
+  else if (currentFilter.value === 'videos') {
+    result = result.filter(file => file.mime_type.includes('video'));
+  }
+  else if (currentFilter.value === 'documents') {
+    result = result.filter(file =>
+      file.mime_type.includes('pdf') ||
+      file.mime_type.includes('document') ||
+      file.mime_type.includes('msword') ||
+      file.mime_type.includes('text')
+    );
+  }
+  else if (currentFilter.value === 'others') {
+    result = result.filter(file =>
+      file.mime_type !== 'directory' &&
+      !file.mime_type.includes('image') &&
+      !file.mime_type.includes('video') &&
+      !file.mime_type.includes('pdf') &&
+      !file.mime_type.includes('document') &&
+      !file.mime_type.includes('msword') &&
+      !file.mime_type.includes('text')
+    );
+  }
 
+  // --- 2. FILTER PENCARIAN (SEARCH) ---
   if (searchQuery.value.trim() !== '') {
     const keyword = searchQuery.value.toLowerCase();
     result = result.filter(file =>
       file.original_name.toLowerCase().includes(keyword)
     );
   }
+
+  // --- 3. SORTING: FOLDER DI ATAS, FILE DI BAWAH ---
+  result = result.sort((a, b) => {
+    const isFolderA = a.mime_type === 'directory';
+    const isFolderB = b.mime_type === 'directory';
+
+    // Jika A folder dan B bukan, A naik ke atas (-1)
+    if (isFolderA && !isFolderB) return -1;
+
+    // Jika B folder dan A bukan, B naik ke atas (1)
+    if (!isFolderA && isFolderB) return 1;
+
+
+    // urutkan berdasarkan abjad nama file (A-Z)
+    return a.original_name.localeCompare(b.original_name);
+  });
 
   return result;
 });
