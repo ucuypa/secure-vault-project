@@ -24,13 +24,6 @@
             <span>Activity</span>
           </router-link>
         </div>
-
-        <div class="nav-item">
-          <router-link to="/profile" class="nav-item">
-            <User class="icon" />
-            <span>Profile</span>
-          </router-link>
-        </div>
       </nav>
     </aside>
 
@@ -95,11 +88,42 @@
           </div>
         </div>
 
-        <router-link to="/profile" style="text-decoration: none; color: inherit;">
-          <div class="user-avatar">
+        <div class="profile-dropdown-wrapper">
+
+          <div class="user-avatar" @click="toggleProfileDropdown">
             {{ userInitial }}
           </div>
-        </router-link>
+
+          <div v-if="showProfileDropdown" class="profile-dropdown" @click.stop>
+
+            <div class="profile-header">
+              <span class="user-email">{{ user.email || 'user@gmail.com' }}</span>
+              <button class="btn-icon-tiny" @click="closeProfileDropdown">
+                <X class="icon-small" />
+              </button>
+            </div>
+
+            <div class="profile-body">
+              <div class="user-avatar-large">{{ userInitial }}</div>
+              <p class="profile-greeting">Hi, {{ user.name || 'User' }}!</p>
+            </div>
+
+            <div class="dropdown-divider-full"></div>
+
+            <router-link to="/profile" class="profile-menu-item" @click="closeProfileDropdown">
+              <User class="icon-small" />
+              <span>Manage account</span>
+            </router-link>
+
+            <div class="dropdown-divider-full"></div>
+
+            <div class="profile-menu-item" @click="handleLogout">
+              <LogOut class="icon-small" />
+              <span>Log out</span>
+            </div>
+
+          </div>
+        </div>
       </header>
 
       <section class="content-area">
@@ -140,10 +164,30 @@
                 </td>
                 <td class="text-muted">{{ formatDate(file.created_at) }}</td>
                 <td class="text-muted">{{ file.mime_type === 'directory' ? '--' : formatSize(file.file_size) }}</td>
-                <td class="text-right">
-                  <button class="btn-icon">
+                <td class="text-right dropdown-cell">
+                  <button class="btn-icon" @click.stop="toggleDropdown(file.id)">
                     <MoreVertical class="icon" />
                   </button>
+
+                  <div v-if="activeDropdownId === file.id" class="action-dropdown" @click.stop>
+                    <div class="dropdown-item" @click="downloadFile(file)">
+                      <Download class="icon-small" />
+                      <span>Download</span>
+                    </div>
+                    <div class="dropdown-item" @click="renameFile(file)">
+                      <Edit2 class="icon-small" />
+                      <span>Rename</span>
+                    </div>
+                    <div class="dropdown-item" @click="showFileInfo(file)">
+                      <Info class="icon-small" />
+                      <span>File information</span>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item text-danger" @click="deleteFile(file)">
+                      <Trash2 class="icon-small" />
+                      <span>Delete</span>
+                    </div>
+                  </div>
                 </td>
               </tr>
               <tr v-if="files.length === 0">
@@ -178,6 +222,8 @@
         </div>
       </div>
     </div>
+    <div v-if="activeDropdownId" class="invisible-overlay" @click="closeDropdown"></div>
+    <div v-if="showProfileDropdown" class="invisible-overlay" @click="closeProfileDropdown"></div>
   </div>
 </template>
 
@@ -189,7 +235,7 @@ import {
   Settings, Home as HomeIcon, Folder, LayoutGrid, Search, Plus,
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
-  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File,
+  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, Download, Edit2, Info, LogOut
 } from 'lucide-vue-next'; // Hapus ArrowLeft dari import karena sudah tidak dipakai
 
 const router = useRouter(); // Inisialisasi router
@@ -202,6 +248,33 @@ const isUploading = ref(false);
 const showFolderModal = ref(false);
 const newFolderName = ref('');
 const isCreatingFolder = ref(false);
+const activeDropdownId = ref(null);
+const showProfileDropdown = ref(false);
+
+const toggleProfileDropdown = () => {
+  showProfileDropdown.value = !showProfileDropdown.value;
+};
+
+const closeProfileDropdown = () => {
+  showProfileDropdown.value = false;
+};
+
+const toggleDropdown = (id) => {
+  if (activeDropdownId.value === id) {
+    activeDropdownId.value = null;
+  } else {
+    activeDropdownId.value = id;
+  }
+};
+
+const closeDropdown = () => {
+  activeDropdownId.value = null;
+};
+
+const downloadFile = (file) => { console.log('Downloading', file.original_name); closeDropdown(); };
+const renameFile = (file) => { console.log('Renaming', file.original_name); closeDropdown(); };
+const deleteFile = (file) => { console.log('Deleting', file.original_name); closeDropdown(); };
+const showFileInfo = (file) => { console.log('Info for', file.original_name); closeDropdown(); };
 
 const triggerFileUpload = () => {
   fileInput.value.click();
@@ -389,6 +462,15 @@ const openFolder = (folder) => {
     path: `/folder/${folder.id}`,
     query: { name: folder.original_name } // Ini kuncinya!
   });
+};
+
+const handleLogout = () => {
+  if (confirm('Logout?')) {
+    localStorage.clear();
+    router.push('/login');
+  }
+  alert('Proses logout berjalan!'); // Placeholder
+  closeProfileDropdown();
 };
 
 onMounted(fetchFiles);
@@ -663,22 +745,28 @@ onMounted(fetchFiles);
 }
 
 /* =========================================
-   TABLE STYLES (Fixed Borders)
+   TABLE STYLES (Fixed Borders & Spacing)
 ========================================= */
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
+  /* Mencegah wrapper tabel ikut melar ke bawah */
+  flex: 0 0 auto;
+  margin-bottom: auto;
 }
 
 .file-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  /* Memaksa tabel agar tingginya hanya sebatas kontennya saja */
+  height: max-content;
 }
 
 .file-table th,
 .file-table td {
-  padding: 16px;
+  /* Mengurangi padding vertikal (dari 16px jadi 12px) agar lebih rapi */
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -687,10 +775,14 @@ onMounted(fetchFiles);
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 13px;
+  /* Sedikit jarak ekstra antara header dan baris pertama */
+  padding-bottom: 16px;
 }
 
 .file-row {
   transition: background-color 0.2s;
+  /* Memastikan tinggi baris konsisten */
+  height: 56px;
 }
 
 .file-row:hover td {
@@ -980,5 +1072,172 @@ onMounted(fetchFiles);
   font-size: 13px;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+/* =========================================
+   ACTION DROPDOWN (TRIPLE DOT MENU)
+========================================= */
+.dropdown-cell {
+  position: relative;
+  /* Penting: agar menu absolut berpatokan pada sel ini */
+}
+
+/* Layer transparan yang menutupi seluruh layar agar bisa mendeteksi klik di luar menu */
+.invisible-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 90;
+}
+
+.action-dropdown {
+  position: absolute;
+  right: 40px;
+  /* Menggeser menu ke kiri tombol titik tiga */
+  top: 10px;
+  /* Menyelaraskan tinggi menu */
+  background-color: #2a2a2a;
+  /* Warna latar gelap sesuai referensi */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 200px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #3a3a3a;
+  /* Warna hover sedikit lebih terang */
+}
+
+.dropdown-item .icon-small {
+  color: var(--text-secondary);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 0;
+}
+
+.text-danger {
+  color: #ef4444 !important;
+}
+
+.text-danger .icon-small {
+  color: #ef4444;
+}
+
+/* =========================================
+   PROFILE DROPDOWN MODAL
+========================================= */
+.profile-dropdown-wrapper {
+  position: relative;
+  /* Menjadi jangkar untuk dropdown */
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 48px;
+  /* Muncul tepat di bawah avatar */
+  right: 0;
+  background-color: #262626;
+  /* Sedikit lebih terang dari background utama */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 260px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  text-align: center;
+  padding-left: 20px;
+  /* Menyeimbangkan posisi tombol X agar teks tetap di tengah */
+}
+
+.profile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px 20px 16px;
+  gap: 12px;
+}
+
+.user-avatar-large {
+  width: 56px;
+  height: 56px;
+  background-color: #f97316;
+  /* Warna oranye sama seperti avatar kecil */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  color: white;
+}
+
+.profile-greeting {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.dropdown-divider-full {
+  height: 1px;
+  background-color: var(--border-color);
+  width: 100%;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+  /* Menghilangkan garis bawah pada router-link */
+}
+
+.profile-menu-item:hover {
+  background-color: #333333;
+  /* Efek hover saat disentuh */
+}
+
+.profile-menu-item .icon-small {
+  color: var(--text-secondary);
 }
 </style>

@@ -14,7 +14,7 @@ const routes = [
   { path: '/activity', name: 'ActivityLog', component: ActivityLog },
   { path: '/', redirect: '/login' },
   { path: '/profile', name: 'profile',component: () => import('../views/Profile.vue') },
-  { path: '/folder/:id', name: 'FolderView', component: FolderView, props: true }
+  { path: '/folder/:id', name: 'FolderView', component: FolderView, props: true },
 ]
 
 const router = createRouter({

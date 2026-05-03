@@ -106,8 +106,8 @@
               />
 
               <div class="user-info-brief">
-                <h2>{{ profileForm.name }}</h2>
-                <p class="text-muted">{{ profileForm.email }}</p>
+                <h2>{{ profileForm.name || 'Loading...' }}</h2>
+                <p class="text-muted">{{ profileForm.email || '...' }}</p>
                 <span class="status-badge">Personal Account</span>
               </div>
             </div>
@@ -117,15 +117,9 @@
             <form @submit.prevent="updateProfile" class="profile-form-full">
               <div class="form-section">
                 <h3 class="section-subtitle">Account Information</h3>
-                <div class="input-grid">
-                  <div class="form-group">
-                    <label>Full Name</label>
-                    <input v-model="profileForm.name" type="text" class="form-control" placeholder="Enter your full name" />
-                  </div>
-                  <div class="form-group">
-                    <label>Email Address</label>
-                    <input v-model="profileForm.email" type="email" class="form-control disabled" disabled />
-                  </div>
+                <div class="form-group">
+                  <label>Full Name</label>
+                  <input v-model="profileForm.name" type="text" class="form-control" placeholder="Enter your full name" required />
                 </div>
               </div>
 
@@ -138,6 +132,15 @@
                     type="password" 
                     class="form-control" 
                     placeholder="Enter new password (leave blank to keep current)" 
+                  />
+                </div>
+                <div class="form-group" v-if="profileForm.password">
+                  <label>Confirm Password</label>
+                  <input 
+                    v-model="profileForm.password_confirmation" 
+                    type="password" 
+                    class="form-control" 
+                    placeholder="Re-type new password" 
                   />
                 </div>
               </div>
@@ -159,6 +162,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import profileService from '../api/profile.js'; 
 import { 
   Home as HomeIcon, Folder, User, Bell, Search,
   LogOut, Pencil, Trash2 
@@ -169,18 +173,40 @@ const isSaving = ref(false);
 const fileInputRef = ref(null);
 const profileImageUrl = ref(null);
 
-const profileForm = ref({ name: '', email: '', password: '' });
+const profileForm = ref({ 
+  name: '', 
+  email: '', // Disimpan di state hanya untuk ditampilkan di header brief
+  password: '',
+  password_confirmation: '' 
+});
 
 const userInitial = computed(() => {
   return profileForm.value.name ? profileForm.value.name.charAt(0).toUpperCase() : 'U';
 });
 
+const fetchProfileData = async () => {
+  try {
+    const response = await profileService.getProfile();
+    const userData = response.data.data;
+    
+    profileForm.value.name = userData.name;
+    profileForm.value.email = userData.email;
+
+    localStorage.setItem('user', JSON.stringify(userData));
+  } catch (error) {
+    console.error("Gagal mengambil data profil:", error);
+  }
+};
+
 onMounted(() => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  profileForm.value.name = user.name || 'Satrio Akbar';
-  profileForm.value.email = user.email || 'akbar@gmail.com';
+  profileForm.value.name = user.name || '';
+  profileForm.value.email = user.email || '';
+
   const savedImage = localStorage.getItem('profileImage');
   if (savedImage) profileImageUrl.value = savedImage;
+
+  fetchProfileData();
 });
 
 const triggerFileSelect = () => fileInputRef.value.click();
@@ -205,24 +231,51 @@ const removeProfilePicture = () => {
 };
 
 const updateProfile = async () => {
+  if (profileForm.value.password && profileForm.value.password !== profileForm.value.password_confirmation) {
+    alert('Password confirmation does not match!');
+    return;
+  }
+
   isSaving.value = true;
-  await new Promise(res => setTimeout(res, 800));
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  user.name = profileForm.value.name;
-  localStorage.setItem('user', JSON.stringify(user));
-  isSaving.value = false;
-  alert('Profile saved!');
+  
+  try {
+    // Hanya mengirimkan data nama dan password (tanpa email)
+    const response = await profileService.updateProfile({
+      name: profileForm.value.name,
+      password: profileForm.value.password,
+      password_confirmation: profileForm.value.password_confirmation
+    });
+
+    const updatedUser = response.data.data;
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    profileForm.value.password = '';
+    profileForm.value.password_confirmation = '';
+
+    alert('Profile saved successfully!');
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    if (error.response && error.response.data && error.response.data.message) {
+      alert(`Update failed: ${error.response.data.message}`);
+    } else {
+      alert('Failed to update profile. Please check your inputs.');
+    }
+  } finally {
+    isSaving.value = false;
+  }
 };
 
 const resetForm = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   profileForm.value.name = user.name;
   profileForm.value.password = '';
+  profileForm.value.password_confirmation = '';
 };
 
 const handleLogout = () => {
-  if (confirm('Logout?')) {
-    localStorage.clear();
+  if (confirm('Are you sure you want to logout?')) {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
     router.push('/login');
   }
 };
@@ -230,7 +283,7 @@ const handleLogout = () => {
 
 <style scoped>
 /* =========================================
-   EXACT COPY OF DASHBOARD CSS
+   PAGE STYLES
 ========================================= */
 .nav-item,
 .user-avatar {
@@ -590,12 +643,6 @@ const handleLogout = () => {
 
 .form-section {
   margin-bottom: 32px;
-}
-
-.input-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
 }
 
 .form-group {
