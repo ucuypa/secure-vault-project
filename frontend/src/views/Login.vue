@@ -46,10 +46,25 @@
 import { ref } from 'vue';
 import authService from '../api/auth';
 import { useRouter } from 'vue-router';
+import NotificacationModal from '../components/NotificationModal.vue';
 
 const router = useRouter();
 const loading = ref(false);
 const form = ref({ email: '', password: '' });
+
+// Setup state
+const showNotificationModal = ref(false);
+const notificationType = ref('error');
+const notificationTitle = ref('');
+const notificationMessage = ref('');
+
+// Master function to trigger any notification
+const triggerNotification = (type, title, message) => {
+  notificationType.value = type;
+  notificationTitle.value = title;
+  notificationMessage.value = message;
+  showNotificationModal.value = true;
+};
 
 const handleLogin = async () => {
   loading.value = true;
@@ -57,7 +72,7 @@ const handleLogin = async () => {
     await authService.login(form.value);
     router.push('/dashboard');
   } catch (error) {
-    alert(error.response?.data?.message || 'Invalid credentials');
+    triggerNotification('error', 'Login Failed', error.response?.data?.message || 'Invalid credentials');
   } finally {
     loading.value = false;
   }

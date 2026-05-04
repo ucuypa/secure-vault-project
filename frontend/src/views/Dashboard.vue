@@ -224,6 +224,8 @@
     </div>
     <div v-if="activeDropdownId" class="invisible-overlay" @click="closeDropdown"></div>
     <div v-if="showProfileDropdown" class="invisible-overlay" @click="closeProfileDropdown"></div>
+    <NotificationModal :show="showNotificationModal" :type="notificationType" :title="notificationTitle"
+      :message="notificationMessage" @close="showNotificationModal = false" />
   </div>
 </template>
 
@@ -236,9 +238,10 @@ import {
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
   User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, Download, Edit2, Info, LogOut
-} from 'lucide-vue-next'; // Hapus ArrowLeft dari import karena sudah tidak dipakai
+} from 'lucide-vue-next';
+import NotificationModal from '../components/NotificationModal.vue';
 
-const router = useRouter(); // Inisialisasi router
+const router = useRouter();
 const files = ref([]);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const userInitial = computed(() => user.name ? user.name[0].toUpperCase() : 'U');
@@ -250,6 +253,18 @@ const newFolderName = ref('');
 const isCreatingFolder = ref(false);
 const activeDropdownId = ref(null);
 const showProfileDropdown = ref(false);
+const showNotificationModal = ref(false);
+const notificationType = ref('error');
+const notificationTitle = ref('');
+const notificationMessage = ref('');
+
+// Master function to trigger any notification
+const triggerNotification = (type, title, message) => {
+  notificationType.value = type;
+  notificationTitle.value = title;
+  notificationMessage.value = message;
+  showNotificationModal.value = true;
+};
 
 const toggleProfileDropdown = () => {
   showProfileDropdown.value = !showProfileDropdown.value;
@@ -296,7 +311,7 @@ const handleFileUpload = async (event) => {
   if (!file) return;
 
   if (file.size > 10 * 1024 * 1024) {
-    alert('File size exceeds 10MB limit.');
+    triggerNotification('error', 'Upload Failed', 'File size exceeds 10MB limit.');
     event.target.value = '';
     return;
   }
@@ -312,11 +327,11 @@ const handleFileUpload = async (event) => {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    alert('Success: ' + response.data.message);
+    triggerNotification('success', 'Upload Successful', response.data.message);
     fetchFiles();
   } catch (error) {
     console.error('Upload error:', error);
-    alert('Upload failed. Make sure file is valid and try again.');
+    triggerNotification('error', 'Upload Failed', 'Upload failed. Make sure file is valid and try again.');
   } finally {
     isUploading.value = false;
     event.target.value = '';
@@ -375,7 +390,7 @@ const submitFolder = async () => {
     closeFolderModal();
   } catch (error) {
     console.error("Error creating folder:", error);
-    alert("Failed to create folder.");
+    triggerNotification('error', 'Folder Creation Failed', 'Failed to create folder.');
   } finally {
     isCreatingFolder.value = false;
   }
@@ -469,7 +484,7 @@ const handleLogout = () => {
     localStorage.clear();
     router.push('/login');
   }
-  alert('Proses logout berjalan!'); // Placeholder
+  triggerNotification('info', 'Logging Out', 'Proses logout berjalan!'); // Placeholder
   closeProfileDropdown();
 };
 

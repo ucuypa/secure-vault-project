@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-layout">
-    
+
     <aside class="sidebar-iconic">
       <div class="icon-brand">
         <router-link to="/dashboard" class="nav-item">
@@ -44,7 +44,7 @@
           <span>My Account</span>
         </div>
         <div style="height: 1px; background-color: var(--border-color); margin: 16px 0;"></div>
-        
+
         <div class="menu-item logout-item" @click="handleLogout">
           <LogOut class="icon-small" />
           <span>Logout</span>
@@ -53,7 +53,7 @@
     </aside>
 
     <main class="main-content">
-      
+
       <header class="top-header">
         <div class="header-left">
           <div class="search-wrapper">
@@ -80,30 +80,20 @@
                 <div class="avatar-upload-box" @click="triggerFileSelect" title="Click to change profile picture">
                   <img v-if="profileImageUrl" :src="profileImageUrl" class="profile-img-large" />
                   <div v-else class="large-avatar-placeholder">{{ userInitial }}</div>
-                  
+
                   <div class="avatar-hover-overlay">
                     <Pencil class="icon-white" />
                   </div>
                 </div>
 
-                <button 
-                  v-if="profileImageUrl" 
-                  class="btn-delete-photo-side" 
-                  @click.stop="removeProfilePicture" 
-                  title="Remove photo"
-                >
+                <button v-if="profileImageUrl" class="btn-delete-photo-side" @click.stop="removeProfilePicture"
+                  title="Remove photo">
                   <Trash2 class="icon-trash-action" />
                   <span>Remove Photo</span>
                 </button>
               </div>
 
-              <input 
-                type="file" 
-                ref="fileInputRef" 
-                class="hidden-input" 
-                accept="image/*" 
-                @change="handleFileChange"
-              />
+              <input type="file" ref="fileInputRef" class="hidden-input" accept="image/*" @change="handleFileChange" />
 
               <div class="user-info-brief">
                 <h2>{{ profileForm.name || 'Loading...' }}</h2>
@@ -119,7 +109,8 @@
                 <h3 class="section-subtitle">Account Information</h3>
                 <div class="form-group">
                   <label>Full Name</label>
-                  <input v-model="profileForm.name" type="text" class="form-control" placeholder="Enter your full name" required />
+                  <input v-model="profileForm.name" type="text" class="form-control" placeholder="Enter your full name"
+                    required />
                 </div>
               </div>
 
@@ -127,21 +118,13 @@
                 <h3 class="section-subtitle">Security</h3>
                 <div class="form-group">
                   <label>Change Password</label>
-                  <input 
-                    v-model="profileForm.password" 
-                    type="password" 
-                    class="form-control" 
-                    placeholder="Enter new password (leave blank to keep current)" 
-                  />
+                  <input v-model="profileForm.password" type="password" class="form-control"
+                    placeholder="Enter new password (leave blank to keep current)" />
                 </div>
                 <div class="form-group" v-if="profileForm.password">
                   <label>Confirm Password</label>
-                  <input 
-                    v-model="profileForm.password_confirmation" 
-                    type="password" 
-                    class="form-control" 
-                    placeholder="Re-type new password" 
-                  />
+                  <input v-model="profileForm.password_confirmation" type="password" class="form-control"
+                    placeholder="Re-type new password" />
                 </div>
               </div>
 
@@ -156,28 +139,48 @@
         </div>
       </section>
     </main>
+    <NotificationModal :show="showNotificationModal" :type="notificationType" :title="notificationTitle"
+      :message="notificationMessage" @close="showNotificationModal = false" />
+    <ConfirmModal :show="showLogoutModal" title="Confirm Logout"
+      message="Are you sure you want to sign out of your account?" confirmText="Logout" @close="showLogoutModal = false"
+      @confirm="executeLogout" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import profileService from '../api/profile.js'; 
-import { 
+import profileService from '../api/profile.js';
+import {
   Home as HomeIcon, Folder, User, Bell, Search,
-  LogOut, Pencil, Trash2 
+  LogOut, Pencil, Trash2
 } from 'lucide-vue-next';
+import NotificationModal from '../components/NotificationModal.vue';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const router = useRouter();
 const isSaving = ref(false);
 const fileInputRef = ref(null);
 const profileImageUrl = ref(null);
 
-const profileForm = ref({ 
-  name: '', 
+const showNotificationModal = ref(false);
+const notificationType = ref('error');
+const notificationTitle = ref('');
+const notificationMessage = ref('');
+const showLogoutModal = ref(false);
+
+const triggerNotification = (type, title, message) => {
+  notificationType.value = type;
+  notificationTitle.value = title;
+  notificationMessage.value = message;
+  showNotificationModal.value = true;
+};
+
+const profileForm = ref({
+  name: '',
   email: '', // Disimpan di state hanya untuk ditampilkan di header brief
   password: '',
-  password_confirmation: '' 
+  password_confirmation: ''
 });
 
 const userInitial = computed(() => {
@@ -188,7 +191,7 @@ const fetchProfileData = async () => {
   try {
     const response = await profileService.getProfile();
     const userData = response.data.data;
-    
+
     profileForm.value.name = userData.name;
     profileForm.value.email = userData.email;
 
@@ -224,7 +227,7 @@ const handleFileChange = (event) => {
 };
 
 const removeProfilePicture = () => {
-  if (confirm('Remove profile picture?')) {
+  if (triggerNotification('Remove profile picture?')) {
     profileImageUrl.value = null;
     localStorage.removeItem('profileImage');
   }
@@ -232,12 +235,12 @@ const removeProfilePicture = () => {
 
 const updateProfile = async () => {
   if (profileForm.value.password && profileForm.value.password !== profileForm.value.password_confirmation) {
-    alert('Password confirmation does not match!');
+    triggerNotification('error', 'Password Mismatch', 'Password confirmation does not match!');
     return;
   }
 
   isSaving.value = true;
-  
+
   try {
     // Hanya mengirimkan data nama dan password (tanpa email)
     const response = await profileService.updateProfile({
@@ -248,17 +251,17 @@ const updateProfile = async () => {
 
     const updatedUser = response.data.data;
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    
+
     profileForm.value.password = '';
     profileForm.value.password_confirmation = '';
 
-    alert('Profile saved successfully!');
+    triggerNotification('success', 'Profile Updated', 'Profile saved successfully!');
   } catch (error) {
     console.error("Error updating profile:", error);
     if (error.response && error.response.data && error.response.data.message) {
-      alert(`Update failed: ${error.response.data.message}`);
+      triggerNotification('error', 'Update Failed', `Update failed: ${error.response.data.message}`);
     } else {
-      alert('Failed to update profile. Please check your inputs.');
+      triggerNotification('error', 'Update Failed', 'Failed to update profile. Please check your inputs.');
     }
   } finally {
     isSaving.value = false;
@@ -273,11 +276,14 @@ const resetForm = () => {
 };
 
 const handleLogout = () => {
-  if (confirm('Are you sure you want to logout?')) {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    router.push('/login');
-  }
+  showLogoutModal.value = true;
+};
+
+const executeLogout = () => {
+  showLogoutModal.value = false; // Tutup modal dulu
+  localStorage.removeItem('user');
+  localStorage.removeItem('token');
+  router.push('/login');
 };
 </script>
 
@@ -503,10 +509,26 @@ const handleLogout = () => {
 }
 
 /* Icons */
-.icon { width: 20px; height: 20px; }
-.icon-small { width: 16px; height: 16px; }
-.icon-white { width: 24px; height: 24px; color: #fff; }
-.icon-trash-action { width: 16px; height: 16px; }
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-small {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-white {
+  width: 24px;
+  height: 24px;
+  color: #fff;
+}
+
+.icon-trash-action {
+  width: 16px;
+  height: 16px;
+}
 
 /* =========================================
    PROFILE SPECIFIC STYLES
@@ -568,7 +590,7 @@ const handleLogout = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;

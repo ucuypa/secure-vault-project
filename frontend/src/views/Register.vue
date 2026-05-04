@@ -63,19 +63,34 @@
 import { ref } from 'vue';
 import authService from '../api/auth';
 import { useRouter } from 'vue-router';
+import NotificacationModal from '../components/NotificationModal.vue';
 
 const router = useRouter();
 const loading = ref(false);
 const form = ref({ name: '', email: '', password: '', password_confirmation: '' });
 
+// Setup state
+const showNotificationModal = ref(false);
+const notificationType = ref('error');
+const notificationTitle = ref('');
+const notificationMessage = ref('');
+
+// Master function to trigger any notification
+const triggerNotification = (type, title, message) => {
+  notificationType.value = type;
+  notificationTitle.value = title;
+  notificationMessage.value = message;
+  showNotificationModal.value = true;
+};
+
 const handleRegister = async () => {
   loading.value = true;
   try {
     await authService.register(form.value);
-    alert('Account created! Unlocking login...');
+    triggerNotification('success', 'Account Created', 'Your account has been created successfully!');
     router.push('/login');
   } catch (error) {
-    alert(error.response?.data?.message || 'Registration failed');
+    triggerNotification('error', 'Registration Failed', error.response?.data?.message || 'An error occurred during registration');
   } finally {
     loading.value = false;
   }
