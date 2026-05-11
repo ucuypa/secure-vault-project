@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Models\ActivityLog;
 
 class AuthController extends Controller
 {
@@ -40,6 +41,8 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('vault_token')->plainTextToken;
+
+        ActivityLog::log('LOGIN_SUCCESS');
 
         return response(['user' => $user, 'token' => $token], 200);
     }

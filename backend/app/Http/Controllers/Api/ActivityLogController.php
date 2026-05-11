@@ -9,14 +9,15 @@ use Illuminate\Http\Request;
 class ActivityLogController extends Controller
 {
     /**
-     * 1. GET: Menampilkan riwayat aktivitas MILIK USER yang sedang login saja.
+     * Menampilkan riwayat aktivitas.
      */
     public function index(Request $request)
     {
-        // Security Check: Hanya ambil log milik user yang login
-        $logs = ActivityLog::where('user_id', $request->user()->id)
-                            ->latest()
-                            ->get();
+        // Hanya ambil log milik user yang login, urutkan dari yang terbaru
+        $logs = ActivityLog::with('vaultFile')->where('user_id', $request->user()->id)
+            ->latest()
+            ->limit(50) 
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -26,7 +27,7 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * 2. POST: Mencatat log baru (Otomatis menggunakan ID user yang login).
+     * Mencatat log baru.
      */
     public function store(Request $request)
     {
@@ -35,9 +36,9 @@ class ActivityLogController extends Controller
             'vault_file_id' => 'nullable|exists:vault_files,id',
         ]);
 
-        // Security logic: Ambil IP dan User Agent secara otomatis dari sistem
+        // Ambil IP dan User Agent secara otomatis dari sistem request Laravel
         $log = ActivityLog::create([
-            'user_id'       => $request->user()->id, // Mengambil ID dari token Sanctum
+            'user_id'       => $request->user()->id,
             'vault_file_id' => $request->vault_file_id,
             'action'        => $request->action,
             'ip_address'    => $request->ip(),
@@ -52,37 +53,29 @@ class ActivityLogController extends Controller
     }
 
     /**
-     * 3. GET: Show specific log (dengan pengecekan kepemilikan).
+     * Menampilkan 1 log spesifik.
      */
     public function show(Request $request, $id)
     {
         $log = ActivityLog::where('user_id', $request->user()->id)->findOrFail($id);
 
-        return response()->json(['success' => true, 'data' => $log]);
+        return response()->json([
+            'success' => true,
+            'data'    => $log
+        ]);
     }
 
-    /**
-     * 4. PUT: Update log (Biasanya hanya untuk menambahkan catatan/remarks).
-     */
-    public function update(Request $request, $id)
-    {
-        $log = ActivityLog::where('user_id', $request->user()->id)->findOrFail($id);
+    /*
+    |--------------------------------------------------------------------------
+    | FITUR UPDATE & DESTROY DIHAPUS (IMMUTABLE AUDIT TRAIL)
+    |--------------------------------------------------------------------------
+    | Sesuai dengan best practice keamanan sistem informasi, tabel Log Aktivitas
+    | (Audit Trail) bersifat "Immutable". Artinya, data log yang sudah tercatat
+    | tidak boleh diedit (Update) atau dihapus (Destroy) oleh siapa pun, bahkan
+    | oleh user itu sendiri. Hal ini bertujuan untuk mencegah user nakal
+    | menghilangkan jejak digital mereka setelah menghapus file penting.
+    */
 
-        $request->validate(['action' => 'required|string']);
-
-        $log->update(['action' => $request->action]);
-
-        return response()->json(['success' => true, 'message' => 'Log updated.']);
-    }
-
-    /**
-     * 5. DELETE: Menghapus log (hanya milik sendiri).
-     */
-    public function destroy(Request $request, $id)
-    {
-        $log = ActivityLog::where('user_id', $request->user()->id)->findOrFail($id);
-        $log->delete();
-
-        return response()->json(['success' => true, 'message' => 'Log deleted.']);
-    }
+    // public function update(Request $request, $id) { ... }
+    // public function destroy(Request $request, $id) { ... }
 }

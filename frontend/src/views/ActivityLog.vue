@@ -65,8 +65,8 @@
                 </td>
                 <td>
                   <div class="name-wrapper">
-                    <span v-if="log.vault_file_id" class="file-name text-primary">
-                      File ID: {{ log.vault_file_id }}
+                    <span v-if="log.vault_file" class="file-name text-primary">
+                      {{ log.vault_file.original_name }}
                     </span>
                     <span v-else class="text-muted">--</span>
                   </div>
@@ -87,7 +87,8 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import activityService from '../api/activity.js';
+// import activityService from '../api/activity.js';
+import axios from '../api/axios.js';
 import {
   Home as HomeIcon, Folder, Bell, User,
   LayoutGrid, Trash2, Plus, ChevronDown, Search,
@@ -102,8 +103,8 @@ const userInitial = computed(() => userObj.name ? userObj.name[0].toUpperCase() 
 
 const fetchLogs = async () => {
   try {
-    const response = await activityService.getLogs();
-    logs.value = response.data;
+    const response = await axios.get('/activity');
+    logs.value = response.data.data;
   } catch (error) {
     console.error("Failed to fetch activity logs", error);
   }

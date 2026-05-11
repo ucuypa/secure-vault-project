@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Models\ActivityLog;
 
 class ProfileController extends Controller
 {
@@ -36,6 +37,8 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        ActivityLog::log('UPDATE_PROFILE');
 
         return response()->json([
             'success' => true,

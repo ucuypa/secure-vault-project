@@ -33,7 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/files', [VaultFileController::class, 'index']);
     Route::post('/files', [VaultFileController::class, 'store']);
     Route::get('/files/{id}/download', [VaultFileController::class, 'download']);
-    Route::put('/files/{id}/rename', [VaultFileController::class, 'rename']);
+    Route::put('/files/{id}', [VaultFileController::class, 'update']);
     Route::delete('/files/{id}', [VaultFileController::class, 'destroy']);
 
     // --- 3. ACTIVITY LOGS ---

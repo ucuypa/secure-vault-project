@@ -55,7 +55,6 @@
         <span>Others</span>
       </div>
 
-      <!-- Quick Access Section -->
       <div class="quick-access-section">
         <div class="section-header">
           <span class="section-label-bold">Quick access</span>
@@ -64,7 +63,6 @@
           </button>
         </div>
 
-        <!-- Collapsible Items -->
         <div class="collapsible-wrapper">
           <div class="menu-item collapsible-header">
             <ChevronDown class="icon-tiny" />
@@ -128,7 +126,6 @@
 
       <section class="content-area">
         <div class="content-header">
-          <!-- Tombol Back dihapus karena Dashboard adalah root -->
           <h1 class="page-title">{{ currentFilter === 'folders' ? 'Folders' : 'All Files' }}</h1>
           <div class="action-buttons">
             <button @click="triggerFileUpload" :disabled="isUploading" class="btn-new">
@@ -200,6 +197,7 @@
     </main>
 
     <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden-input">
+
     <div v-if="showFolderModal" class="modal-overlay" @click.self="closeFolderModal">
       <div class="modal-card">
         <div class="modal-header">
@@ -208,12 +206,10 @@
             <X class="icon-small" />
           </button>
         </div>
-
         <div class="modal-body">
           <input v-model="newFolderName" type="text" placeholder="Folder name" class="modal-input"
             @keyup.enter="submitFolder" autofocus />
         </div>
-
         <div class="modal-footer">
           <button @click="closeFolderModal" class="btn-cancel">Cancel</button>
           <button @click="submitFolder" :disabled="!newFolderName.trim() || isCreatingFolder" class="btn-confirm">
@@ -222,8 +218,75 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showRenameModal" class="modal-overlay" @click.self="closeRenameModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Rename</h3>
+          <button @click="closeRenameModal" class="btn-icon">
+            <X class="icon-small" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <input v-model="newFileName" type="text" placeholder="New name" class="modal-input"
+            @keyup.enter="submitRename" autofocus />
+        </div>
+        <div class="modal-footer">
+          <button @click="closeRenameModal" class="btn-cancel">Cancel</button>
+          <button @click="submitRename" :disabled="!newFileName.trim() || isRenaming" class="btn-confirm">
+            {{ isRenaming ? 'Saving...' : 'Rename' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showInfoModal" class="modal-overlay" @click.self="closeInfoModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>File Information</h3>
+          <button @click="closeInfoModal" class="btn-icon">
+            <X class="icon-small" />
+          </button>
+        </div>
+        <div class="modal-body info-body">
+          <div class="info-row">
+            <span class="info-label">Name</span>
+            <span class="info-value">{{ fileInfoData?.original_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Type</span>
+            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? 'Folder' : fileInfoData?.mime_type
+              }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Size</span>
+            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? '--' :
+              formatSize(fileInfoData?.file_size) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Uploaded</span>
+            <span class="info-value">{{ formatDate(fileInfoData?.created_at) }}</span>
+          </div>
+          <div class="info-row" v-if="fileInfoData?.mime_type !== 'directory'">
+            <span class="info-label">Security</span>
+            <span class="info-value text-success flex-align">
+              <Lock class="icon-tiny" style="margin-right: 4px;" /> AES-256 Encrypted
+            </span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeInfoModal" class="btn-confirm">Understood</button>
+        </div>
+      </div>
+    </div>
+
+    <ConfirmModal :show="showDeleteModal" title="Delete Confirmation"
+      :message="`Are you sure you want to permanently delete '${fileToDelete?.original_name}'?`" confirmText="Delete"
+      @close="showDeleteModal = false" @confirm="executeDelete" />
+
     <div v-if="activeDropdownId" class="invisible-overlay" @click="closeDropdown"></div>
     <div v-if="showProfileDropdown" class="invisible-overlay" @click="closeProfileDropdown"></div>
+
     <NotificationModal :show="showNotificationModal" :type="notificationType" :title="notificationTitle"
       :message="notificationMessage" @close="showNotificationModal = false" />
   </div>
@@ -231,15 +294,16 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router'; // Import useRouter
+import { useRouter } from 'vue-router';
 import axios from '../api/axios';
 import {
   Settings, Home as HomeIcon, Folder, LayoutGrid, Search, Plus,
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
-  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, Download, Edit2, Info, LogOut
+  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, Download, Edit2, Info, LogOut, Lock
 } from 'lucide-vue-next';
 import NotificationModal from '../components/NotificationModal.vue';
+import ConfirmModal from '../components/ConfirmModal.vue'; // PASTIKAN KOMPONEN INI DI-IMPORT
 
 const router = useRouter();
 const files = ref([]);
@@ -253,12 +317,27 @@ const newFolderName = ref('');
 const isCreatingFolder = ref(false);
 const activeDropdownId = ref(null);
 const showProfileDropdown = ref(false);
+
+// State Notification Modal
 const showNotificationModal = ref(false);
 const notificationType = ref('error');
 const notificationTitle = ref('');
 const notificationMessage = ref('');
 
-// Master function to trigger any notification
+// State Delete Modal
+const showDeleteModal = ref(false);
+const fileToDelete = ref(null);
+
+// State Rename Modal
+const showRenameModal = ref(false);
+const fileToRename = ref(null);
+const newFileName = ref('');
+const isRenaming = ref(false);
+
+// State Info Modal
+const showInfoModal = ref(false);
+const fileInfoData = ref(null);
+
 const triggerNotification = (type, title, message) => {
   notificationType.value = type;
   notificationTitle.value = title;
@@ -266,40 +345,137 @@ const triggerNotification = (type, title, message) => {
   showNotificationModal.value = true;
 };
 
-const toggleProfileDropdown = () => {
-  showProfileDropdown.value = !showProfileDropdown.value;
+const toggleProfileDropdown = () => { showProfileDropdown.value = !showProfileDropdown.value; };
+const closeProfileDropdown = () => { showProfileDropdown.value = false; };
+const toggleDropdown = (id) => { activeDropdownId.value = activeDropdownId.value === id ? null : id; };
+const closeDropdown = () => { activeDropdownId.value = null; };
+
+// ==========================================
+// RENAME LOGIC
+// ==========================================
+const renameFile = (file) => {
+  closeDropdown();
+  fileToRename.value = file;
+  newFileName.value = file.original_name;
+  showRenameModal.value = true;
 };
 
-const closeProfileDropdown = () => {
-  showProfileDropdown.value = false;
+const closeRenameModal = () => {
+  showRenameModal.value = false;
+  fileToRename.value = null;
+  newFileName.value = '';
 };
 
-const toggleDropdown = (id) => {
-  if (activeDropdownId.value === id) {
-    activeDropdownId.value = null;
-  } else {
-    activeDropdownId.value = id;
+const submitRename = async () => {
+  if (!newFileName.value.trim() || newFileName.value === fileToRename.value.original_name) {
+    closeRenameModal();
+    return;
+  }
+
+  isRenaming.value = true;
+  try {
+    await axios.put(`/files/${fileToRename.value.id}`, {
+      original_name: newFileName.value.trim()
+    });
+
+    // Update state lokal
+    const index = files.value.findIndex(f => f.id === fileToRename.value.id);
+    if (index !== -1) {
+      files.value[index].original_name = newFileName.value.trim();
+    }
+
+    triggerNotification('success', 'Rename Successful', `File renamed to "${newFileName.value.trim()}".`);
+    closeRenameModal();
+  } catch (error) {
+    console.error("Error renaming:", error);
+    triggerNotification('error', 'Rename Failed', 'Failed to rename the file. Please try again.');
+  } finally {
+    isRenaming.value = false;
   }
 };
 
-const closeDropdown = () => {
-  activeDropdownId.value = null;
+// ==========================================
+// FILE INFO LOGIC
+// ==========================================
+const showFileInfo = (file) => {
+  closeDropdown();
+  fileInfoData.value = file;
+  showInfoModal.value = true;
 };
 
-const downloadFile = (file) => { console.log('Downloading', file.original_name); closeDropdown(); };
-const renameFile = (file) => { console.log('Renaming', file.original_name); closeDropdown(); };
-const deleteFile = (file) => { console.log('Deleting', file.original_name); closeDropdown(); };
-const showFileInfo = (file) => { console.log('Info for', file.original_name); closeDropdown(); };
-
-const triggerFileUpload = () => {
-  fileInput.value.click();
+const closeInfoModal = () => {
+  showInfoModal.value = false;
+  fileInfoData.value = null;
 };
+
+// ==========================================
+// DELETE LOGIC
+// ==========================================
+const deleteFile = (file) => {
+  closeDropdown();
+  fileToDelete.value = file;
+  showDeleteModal.value = true; // Munculkan ConfirmModal
+};
+
+const executeDelete = async () => {
+  if (!fileToDelete.value) return;
+
+  try {
+    await axios.delete(`/files/${fileToDelete.value.id}`);
+
+    // Hapus file dari tabel secara real-time
+    files.value = files.value.filter(f => f.id !== fileToDelete.value.id);
+
+    showDeleteModal.value = false; // Tutup modal
+    triggerNotification('success', 'File Deleted', `"${fileToDelete.value.original_name}" has been permanently removed.`);
+  } catch (error) {
+    console.error("Error saat menghapus:", error);
+    triggerNotification('error', 'Deletion Failed', 'Failed to delete the file. Please try again.');
+  } finally {
+    fileToDelete.value = null;
+  }
+};
+
+// ==========================================
+// DOWNLOAD LOGIC
+// ==========================================
+const downloadFile = async (file) => {
+  closeDropdown();
+
+  if (file.mime_type === 'directory') {
+    triggerNotification('error', 'Download Failed', 'Cannot download a folder directly.');
+    return;
+  }
+
+  try {
+    const response = await axios.get(`/files/${file.id}/download`, {
+      responseType: 'blob'
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', file.original_name);
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error saat mendownload:", error);
+    triggerNotification('error', 'Download Failed', 'The file could not be downloaded. It may have been deleted.');
+  }
+};
+
+// ==========================================
+// UPLOAD & FETCHING LOGIC
+// ==========================================
+
+const triggerFileUpload = () => { fileInput.value.click(); };
 
 const fetchFiles = async () => {
   try {
-    const response = await axios.get('/files', {
-      params: { parent_id: null } // Dashboard selalu memuat file root (parent_id: null)
-    });
+    const response = await axios.get('/files', { params: { parent_id: null } });
     files.value = response.data.data;
   } catch (error) {
     console.error("Failed to fetch files", error);
@@ -318,7 +494,6 @@ const handleFileUpload = async (event) => {
 
   const formData = new FormData();
   formData.append('file', file);
-  // Upload dari Dashboard selalu ke root
 
   isUploading.value = true;
 
@@ -331,7 +506,7 @@ const handleFileUpload = async (event) => {
     fetchFiles();
   } catch (error) {
     console.error('Upload error:', error);
-    triggerNotification('error', 'Upload Failed', 'Upload failed. Make sure file is valid and try again.');
+    triggerNotification('error', 'Upload Failed', 'Upload failed. Make sure the file is valid.');
   } finally {
     isUploading.value = false;
     event.target.value = '';
@@ -366,28 +541,18 @@ const formatSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const openFolderModal = () => {
-  newFolderName.value = '';
-  showFolderModal.value = true;
-};
-
-const closeFolderModal = () => {
-  showFolderModal.value = false;
-  newFolderName.value = '';
-};
+const openFolderModal = () => { newFolderName.value = ''; showFolderModal.value = true; };
+const closeFolderModal = () => { showFolderModal.value = false; newFolderName.value = ''; };
 
 const submitFolder = async () => {
   if (!newFolderName.value.trim()) return;
 
   isCreatingFolder.value = true;
   try {
-    await axios.post('/files', {
-      name: newFolderName.value.trim(),
-      parent_id: null // Buat folder dari Dashboard selalu di root
-    });
-
+    await axios.post('/files', { name: newFolderName.value.trim(), parent_id: null });
     fetchFiles();
     closeFolderModal();
+    triggerNotification('success', 'Folder Created', `Folder "${newFolderName.value}" has been created.`);
   } catch (error) {
     console.error("Error creating folder:", error);
     triggerNotification('error', 'Folder Creation Failed', 'Failed to create folder.');
@@ -397,86 +562,41 @@ const submitFolder = async () => {
 };
 
 const currentFilter = ref('all');
-
-const setFilter = (filterType) => {
-  currentFilter.value = filterType;
-};
-
-const folderList = computed(() => {
-  return files.value.filter(file => file.mime_type === 'directory');
-});
-
+const setFilter = (filterType) => { currentFilter.value = filterType; };
 const searchQuery = ref('');
 
 const filteredFiles = computed(() => {
   let result = files.value;
 
-  // --- 1. FILTER KATEGORI SIDEBAR ---
-  if (currentFilter.value === 'folders') {
-    result = result.filter(file => file.mime_type === 'directory');
-  }
-  else if (currentFilter.value === 'photos') {
-    result = result.filter(file => file.mime_type.includes('image'));
-  }
-  else if (currentFilter.value === 'videos') {
-    result = result.filter(file => file.mime_type.includes('video'));
-  }
+  if (currentFilter.value === 'folders') { result = result.filter(file => file.mime_type === 'directory'); }
+  else if (currentFilter.value === 'photos') { result = result.filter(file => file.mime_type.includes('image')); }
+  else if (currentFilter.value === 'videos') { result = result.filter(file => file.mime_type.includes('video')); }
   else if (currentFilter.value === 'documents') {
-    result = result.filter(file =>
-      file.mime_type.includes('pdf') ||
-      file.mime_type.includes('document') ||
-      file.mime_type.includes('msword') ||
-      file.mime_type.includes('text')
-    );
+    result = result.filter(file => file.mime_type.includes('pdf') || file.mime_type.includes('document') || file.mime_type.includes('msword') || file.mime_type.includes('text'));
   }
   else if (currentFilter.value === 'others') {
-    result = result.filter(file =>
-      file.mime_type !== 'directory' &&
-      !file.mime_type.includes('image') &&
-      !file.mime_type.includes('video') &&
-      !file.mime_type.includes('pdf') &&
-      !file.mime_type.includes('document') &&
-      !file.mime_type.includes('msword') &&
-      !file.mime_type.includes('text')
-    );
+    result = result.filter(file => file.mime_type !== 'directory' && !file.mime_type.includes('image') && !file.mime_type.includes('video') && !file.mime_type.includes('pdf') && !file.mime_type.includes('document') && !file.mime_type.includes('msword') && !file.mime_type.includes('text'));
   }
 
-  // --- 2. FILTER PENCARIAN (SEARCH) ---
   if (searchQuery.value.trim() !== '') {
     const keyword = searchQuery.value.toLowerCase();
-    result = result.filter(file =>
-      file.original_name.toLowerCase().includes(keyword)
-    );
+    result = result.filter(file => file.original_name.toLowerCase().includes(keyword));
   }
 
-  // --- 3. SORTING: FOLDER DI ATAS, FILE DI BAWAH ---
   result = result.sort((a, b) => {
     const isFolderA = a.mime_type === 'directory';
     const isFolderB = b.mime_type === 'directory';
-
-    // Jika A folder dan B bukan, A naik ke atas (-1)
     if (isFolderA && !isFolderB) return -1;
-
-    // Jika B folder dan A bukan, B naik ke atas (1)
     if (!isFolderA && isFolderB) return 1;
-
-
-    // urutkan berdasarkan abjad nama file (A-Z)
     return a.original_name.localeCompare(b.original_name);
   });
 
   return result;
 });
 
-// Arahkan ke URL folder baru saat diklik ganda
 const openFolder = (folder) => {
   if (folder.mime_type !== 'directory') return;
-
-  // Pindah halaman sambil membawa ID (params) dan Nama Folder (query)
-  router.push({
-    path: `/folder/${folder.id}`,
-    query: { name: folder.original_name } // Ini kuncinya!
-  });
+  router.push({ path: `/folder/${folder.id}`, query: { name: folder.original_name } });
 };
 
 const handleLogout = () => {
@@ -484,7 +604,6 @@ const handleLogout = () => {
     localStorage.clear();
     router.push('/login');
   }
-  triggerNotification('info', 'Logging Out', 'Proses logout berjalan!'); // Placeholder
   closeProfileDropdown();
 };
 
@@ -526,6 +645,7 @@ onMounted(fetchFiles);
   --text-secondary: #a0a0a0;
   --text-muted: #6e6e6e;
   --text-inverse: #000000;
+  --color-success: #10b981;
 
   display: flex;
   height: 100vh;
@@ -760,27 +880,25 @@ onMounted(fetchFiles);
 }
 
 /* =========================================
-   TABLE STYLES (Fixed Borders & Spacing)
+   TABLE STYLES 
 ========================================= */
 .table-wrapper {
   width: 100%;
-  overflow-x: auto;
-  /* Mencegah wrapper tabel ikut melar ke bawah */
+  overflow-x: visible;
   flex: 0 0 auto;
   margin-bottom: auto;
+  padding-bottom: 150px;
 }
 
 .file-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  /* Memaksa tabel agar tingginya hanya sebatas kontennya saja */
   height: max-content;
 }
 
 .file-table th,
 .file-table td {
-  /* Mengurangi padding vertikal (dari 16px jadi 12px) agar lebih rapi */
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
@@ -790,13 +908,11 @@ onMounted(fetchFiles);
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 13px;
-  /* Sedikit jarak ekstra antara header dan baris pertama */
   padding-bottom: 16px;
 }
 
 .file-row {
   transition: background-color 0.2s;
-  /* Memastikan tinggi baris konsisten */
   height: 56px;
 }
 
@@ -879,6 +995,11 @@ onMounted(fetchFiles);
   display: none;
 }
 
+.flex-align {
+  display: flex;
+  align-items: center;
+}
+
 /* Dynamic Icon Colors */
 .color-folder {
   color: #ffca28;
@@ -896,8 +1017,12 @@ onMounted(fetchFiles);
   color: #9ca3af;
 }
 
+.text-success {
+  color: var(--color-success);
+}
+
 /* =========================================
-   MODAL POP-UP (NEW FOLDER)
+   MODAL STYLES (GENERAL)
 ========================================= */
 .modal-overlay {
   position: fixed;
@@ -1006,28 +1131,37 @@ onMounted(fetchFiles);
   cursor: not-allowed;
 }
 
-/* =========================================
-   SIDEBAR FOLDER SECTION
-========================================= */
-.folder-list-section {
-  margin-top: 32px;
+/* FILE INFO SPECIFIC */
+.info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-  padding: 0 8px;
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--border-color);
+  padding-bottom: 8px;
 }
 
-.truncate-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
+.info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  max-width: 65%;
+  word-break: break-word;
 }
 
 /* =========================================
@@ -1078,26 +1212,13 @@ onMounted(fetchFiles);
   color: #dddddd;
 }
 
-.collapsible-content {
-  padding: 4px 8px 16px 28px;
-  /* Indentasi ke dalam */
-}
-
-.empty-drag-text {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
 /* =========================================
    ACTION DROPDOWN (TRIPLE DOT MENU)
 ========================================= */
 .dropdown-cell {
   position: relative;
-  /* Penting: agar menu absolut berpatokan pada sel ini */
 }
 
-/* Layer transparan yang menutupi seluruh layar agar bisa mendeteksi klik di luar menu */
 .invisible-overlay {
   position: fixed;
   top: 0;
@@ -1110,17 +1231,14 @@ onMounted(fetchFiles);
 .action-dropdown {
   position: absolute;
   right: 40px;
-  /* Menggeser menu ke kiri tombol titik tiga */
   top: 10px;
-  /* Menyelaraskan tinggi menu */
   background-color: #2a2a2a;
-  /* Warna latar gelap sesuai referensi */
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 0;
   min-width: 200px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  z-index: 999; 
   display: flex;
   flex-direction: column;
   text-align: left;
@@ -1139,7 +1257,6 @@ onMounted(fetchFiles);
 
 .dropdown-item:hover {
   background-color: #3a3a3a;
-  /* Warna hover sedikit lebih terang */
 }
 
 .dropdown-item .icon-small {
@@ -1165,16 +1282,13 @@ onMounted(fetchFiles);
 ========================================= */
 .profile-dropdown-wrapper {
   position: relative;
-  /* Menjadi jangkar untuk dropdown */
 }
 
 .profile-dropdown {
   position: absolute;
   top: 48px;
-  /* Muncul tepat di bawah avatar */
   right: 0;
   background-color: #262626;
-  /* Sedikit lebih terang dari background utama */
   border: 1px solid var(--border-color);
   border-radius: 8px;
   width: 260px;
@@ -1197,7 +1311,6 @@ onMounted(fetchFiles);
   flex: 1;
   text-align: center;
   padding-left: 20px;
-  /* Menyeimbangkan posisi tombol X agar teks tetap di tengah */
 }
 
 .profile-body {
@@ -1212,7 +1325,6 @@ onMounted(fetchFiles);
   width: 56px;
   height: 56px;
   background-color: #f97316;
-  /* Warna oranye sama seperti avatar kecil */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1244,12 +1356,10 @@ onMounted(fetchFiles);
   cursor: pointer;
   transition: background-color 0.2s;
   text-decoration: none;
-  /* Menghilangkan garis bawah pada router-link */
 }
 
 .profile-menu-item:hover {
   background-color: #333333;
-  /* Efek hover saat disentuh */
 }
 
 .profile-menu-item .icon-small {
