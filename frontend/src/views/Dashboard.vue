@@ -54,27 +54,6 @@
         <File class="icon-small" />
         <span>Others</span>
       </div>
-
-      <div class="quick-access-section">
-        <div class="section-header">
-          <span class="section-label-bold">Quick access</span>
-          <button class="btn-icon-tiny">
-            <Plus class="icon-tiny" />
-          </button>
-        </div>
-
-        <div class="collapsible-wrapper">
-          <div class="menu-item collapsible-header">
-            <ChevronDown class="icon-tiny" />
-            <span>Starred</span>
-          </div>
-
-          <div class="menu-item collapsible-header">
-            <ChevronDown class="icon-tiny" />
-            <span>Untitled</span>
-          </div>
-        </div>
-      </div>
     </aside>
 
     <main class="main-content">
@@ -89,7 +68,8 @@
         <div class="profile-dropdown-wrapper">
 
           <div class="user-avatar" @click="toggleProfileDropdown">
-            {{ userInitial }}
+            <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-small" />
+            <span v-else>{{ userInitial }}</span>
           </div>
 
           <div v-if="showProfileDropdown" class="profile-dropdown" @click.stop>
@@ -102,7 +82,10 @@
             </div>
 
             <div class="profile-body">
-              <div class="user-avatar-large">{{ userInitial }}</div>
+              <div class="user-avatar-large">
+                <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-large" />
+                <span v-else>{{ userInitial }}</span>
+              </div>
               <p class="profile-greeting">Hi, {{ user.name || 'User' }}!</p>
             </div>
 
@@ -256,7 +239,7 @@
           <div class="info-row">
             <span class="info-label">Type</span>
             <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? 'Folder' : fileInfoData?.mime_type
-              }}</span>
+            }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Size</span>
@@ -309,6 +292,7 @@ const router = useRouter();
 const files = ref([]);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const userInitial = computed(() => user.name ? user.name[0].toUpperCase() : 'U');
+const profileImageUrl = ref(null);
 const fileInput = ref(null);
 const isUploading = ref(false);
 
@@ -607,7 +591,15 @@ const handleLogout = () => {
   closeProfileDropdown();
 };
 
-onMounted(fetchFiles);
+onMounted(() => {
+  fetchFiles();
+
+  // Ambil foto profil dari localStorage
+  const savedImage = localStorage.getItem('profileImage');
+  if (savedImage) {
+    profileImageUrl.value = savedImage;
+  }
+});
 </script>
 
 <style scoped>
@@ -825,6 +817,7 @@ onMounted(fetchFiles);
   color: var(--text-secondary);
 }
 
+/* Cari class .user-avatar dan tambahkan overflow: hidden jika belum ada */
 .user-avatar {
   width: 32px;
   height: 32px;
@@ -835,6 +828,34 @@ onMounted(fetchFiles);
   justify-content: center;
   font-weight: bold;
   cursor: pointer;
+
+  /* TAMBAHKAN INI AGAR GAMBAR TIDAK KELUAR DARI LINGKARAN */
+  overflow: hidden;
+}
+
+/* Tambahkan class ini untuk mengatur ukuran gambarnya */
+.avatar-img-small,
+.avatar-img-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Khusus Dashboard, pastikan user-avatar-large juga punya overflow: hidden */
+.user-avatar-large {
+  width: 56px;
+  height: 56px;
+  background-color: #f97316;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  color: white;
+
+  /* TAMBAHKAN INI */
+  overflow: hidden;
 }
 
 /* =========================================
@@ -1165,54 +1186,6 @@ onMounted(fetchFiles);
 }
 
 /* =========================================
-   QUICK ACCESS SECTION
-========================================= */
-.quick-access-section {
-  padding: 0 4px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px;
-  margin-bottom: 4px;
-}
-
-.section-label-bold {
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.btn-icon-tiny {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon-tiny:hover {
-  color: #ffffff;
-}
-
-.collapsible-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.collapsible-header {
-  gap: 8px;
-  padding: 8px;
-  font-size: 13px;
-  color: #dddddd;
-}
-
-/* =========================================
    ACTION DROPDOWN (TRIPLE DOT MENU)
 ========================================= */
 .dropdown-cell {
@@ -1238,7 +1211,7 @@ onMounted(fetchFiles);
   padding: 8px 0;
   min-width: 200px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-  z-index: 999; 
+  z-index: 999;
   display: flex;
   flex-direction: column;
   text-align: left;

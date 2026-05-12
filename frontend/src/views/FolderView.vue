@@ -24,13 +24,6 @@
             <span>Activity</span>
           </router-link>
         </div>
-
-        <div class="nav-item">
-          <router-link to="/profile" class="nav-item" style="text-decoration: none;">
-            <User class="icon" />
-            <span>Profile</span>
-          </router-link>
-        </div>
       </nav>
     </aside>
 
@@ -61,27 +54,6 @@
         <File class="icon-small" />
         <span>Others</span>
       </div>
-
-      <div class="quick-access-section">
-        <div class="section-header">
-          <span class="section-label-bold">Quick access</span>
-          <button class="btn-icon-tiny">
-            <Plus class="icon-tiny" />
-          </button>
-        </div>
-
-        <div class="collapsible-wrapper">
-          <div class="menu-item collapsible-header">
-            <ChevronDown class="icon-tiny" />
-            <span>Starred</span>
-          </div>
-
-          <div class="menu-item collapsible-header">
-            <ChevronDown class="icon-tiny" />
-            <span>Untitled</span>
-          </div>
-        </div>
-      </div>
     </aside>
 
     <main class="main-content">
@@ -93,11 +65,46 @@
           </div>
         </div>
 
-        <router-link to="/profile" style="text-decoration: none; color: inherit;">
-          <div class="user-avatar">
-            {{ userInitial }}
+        <div class="profile-dropdown-wrapper">
+
+          <div class="user-avatar" @click="toggleProfileDropdown">
+            <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-small" />
+            <span v-else>{{ userInitial }}</span>
           </div>
-        </router-link>
+
+          <div v-if="showProfileDropdown" class="profile-dropdown" @click.stop>
+
+            <div class="profile-header">
+              <span class="user-email">{{ user.email || 'user@gmail.com' }}</span>
+              <button class="btn-icon-tiny" @click="closeProfileDropdown">
+                <X class="icon-small" />
+              </button>
+            </div>
+
+            <div class="profile-body">
+              <div class="user-avatar-large">
+                <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-large" />
+                <span v-else>{{ userInitial }}</span>
+              </div>
+              <p class="profile-greeting">Hi, {{ user.name || 'User' }}!</p>
+            </div>
+
+            <div class="dropdown-divider-full"></div>
+
+            <router-link to="/profile" class="profile-menu-item" @click="closeProfileDropdown">
+              <User class="icon-small" />
+              <span>Manage account</span>
+            </router-link>
+
+            <div class="dropdown-divider-full"></div>
+
+            <div class="profile-menu-item" @click="handleLogout">
+              <LogOut class="icon-small" />
+              <span>Log out</span>
+            </div>
+
+          </div>
+        </div>
       </header>
 
       <section class="content-area">
@@ -106,7 +113,8 @@
             <button @click="goBack" class="btn-icon" style="background: var(--bg-hover);">
               <ArrowLeft class="icon" />
             </button>
-            <h1 class="page-title">{{ currentFilter === 'all' ? (route.query.name || 'Folder') : pageTitleMap[currentFilter] }}</h1>
+            <h1 class="page-title">{{ currentFilter === 'all' ? (route.query.name || 'Folder') :
+              pageTitleMap[currentFilter] }}</h1>
           </div>
 
           <div class="action-buttons">
@@ -179,7 +187,7 @@
     </main>
 
     <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden-input">
-    
+
     <div v-if="showFolderModal" class="modal-overlay" @click.self="closeFolderModal">
       <div class="modal-card">
         <div class="modal-header">
@@ -239,11 +247,13 @@
           </div>
           <div class="info-row">
             <span class="info-label">Type</span>
-            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? 'Folder' : fileInfoData?.mime_type }}</span>
+            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? 'Folder' : fileInfoData?.mime_type
+            }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Size</span>
-            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? '--' : formatSize(fileInfoData?.file_size) }}</span>
+            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? '--' :
+              formatSize(fileInfoData?.file_size) }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Uploaded</span>
@@ -262,15 +272,10 @@
       </div>
     </div>
 
-    <ConfirmModal 
-      :show="showDeleteModal" 
-      title="Delete Confirmation" 
-      :message="`Are you sure you want to permanently delete '${fileToDelete?.original_name}'?`" 
-      confirmText="Delete"
-      @close="showDeleteModal = false" 
-      @confirm="executeDelete" 
-    />
-    
+    <ConfirmModal :show="showDeleteModal" title="Delete Confirmation"
+      :message="`Are you sure you want to permanently delete '${fileToDelete?.original_name}'?`" confirmText="Delete"
+      @close="showDeleteModal = false" @confirm="executeDelete" />
+
     <div v-if="activeDropdownId" class="invisible-overlay" @click="closeDropdown"></div>
     <NotificationModal :show="showNotificationModal" :type="notificationType" :title="notificationTitle"
       :message="notificationMessage" @close="showNotificationModal = false" />
@@ -286,21 +291,23 @@ import {
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
   User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, ArrowLeft,
-  Download, Edit2, Info, Lock
+  Download, Edit2, Info, Lock, LogOut
 } from 'lucide-vue-next';
 import NotificationModal from '../components/NotificationModal.vue';
 import ConfirmModal from '../components/ConfirmModal.vue';
 
 const route = useRoute();
-const router = useRouter(); 
+const router = useRouter();
 const files = ref([]);
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const userInitial = computed(() => user.name ? user.name[0].toUpperCase() : 'U');
+const profileImageUrl = ref(null);
 const fileInput = ref(null);
 const isUploading = ref(false);
 
 // State Dropdown
 const activeDropdownId = ref(null);
+const showProfileDropdown = ref(false);
 
 // State Modals
 const showFolderModal = ref(false);
@@ -334,6 +341,8 @@ const triggerNotification = (type, title, message) => {
   showNotificationModal.value = true;
 };
 
+const toggleProfileDropdown = () => { showProfileDropdown.value = !showProfileDropdown.value; };
+const closeProfileDropdown = () => { showProfileDropdown.value = false; };
 const toggleDropdown = (id) => { activeDropdownId.value = activeDropdownId.value === id ? null : id; };
 const closeDropdown = () => { activeDropdownId.value = null; };
 
@@ -341,8 +350,8 @@ const closeDropdown = () => { activeDropdownId.value = null; };
 // API INTEGRATION: DELETE, RENAME, DOWNLOAD, INFO
 // ==========================================
 
-const showFileInfo = (file) => { 
-  closeDropdown(); 
+const showFileInfo = (file) => {
+  closeDropdown();
   fileInfoData.value = file;
   showInfoModal.value = true;
 };
@@ -352,8 +361,8 @@ const closeInfoModal = () => {
   fileInfoData.value = null;
 };
 
-const renameFile = (file) => { 
-  closeDropdown(); 
+const renameFile = (file) => {
+  closeDropdown();
   fileToRename.value = file;
   newFileName.value = file.original_name;
   showRenameModal.value = true;
@@ -404,7 +413,7 @@ const executeDelete = async () => {
   try {
     await axios.delete(`/files/${fileToDelete.value.id}`);
     files.value = files.value.filter(f => f.id !== fileToDelete.value.id);
-    
+
     showDeleteModal.value = false;
     triggerNotification('success', 'Deleted', `"${fileToDelete.value.original_name}" has been permanently removed.`);
   } catch (error) {
@@ -417,7 +426,7 @@ const executeDelete = async () => {
 
 const downloadFile = async (file) => {
   closeDropdown();
-  
+
   if (file.mime_type === 'directory') {
     triggerNotification('error', 'Download Failed', 'Cannot download a folder directly.');
     return;
@@ -425,16 +434,16 @@ const downloadFile = async (file) => {
 
   try {
     const response = await axios.get(`/files/${file.id}/download`, {
-      responseType: 'blob' 
+      responseType: 'blob'
     });
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', file.original_name); 
+    link.setAttribute('download', file.original_name);
     document.body.appendChild(link);
     link.click();
-    
+
     link.remove();
     window.URL.revokeObjectURL(url);
   } catch (error) {
@@ -454,7 +463,7 @@ const triggerFileUpload = () => {
 const fetchFiles = async () => {
   try {
     const response = await axios.get('/files', {
-      params: { parent_id: currentFolderId.value } 
+      params: { parent_id: currentFolderId.value }
     });
     files.value = response.data.data;
   } catch (error) {
@@ -480,7 +489,7 @@ const handleFileUpload = async (event) => {
 
   const formData = new FormData();
   formData.append('file', file);
-  
+
   if (currentFolderId.value) {
     formData.append('parent_id', currentFolderId.value);
   }
@@ -549,7 +558,7 @@ const submitFolder = async () => {
   try {
     await axios.post('/files', {
       name: newFolderName.value.trim(),
-      parent_id: currentFolderId.value 
+      parent_id: currentFolderId.value
     });
 
     fetchFiles();
@@ -618,7 +627,15 @@ const goBack = () => {
   router.back();
 };
 
-onMounted(fetchFiles);
+onMounted(() => {
+  fetchFiles();
+
+  // Ambil foto profil dari localStorage
+  const savedImage = localStorage.getItem('profileImage');
+  if (savedImage) {
+    profileImageUrl.value = savedImage;
+  }
+});
 </script>
 
 <style scoped>
@@ -846,7 +863,36 @@ onMounted(fetchFiles);
   justify-content: center;
   font-weight: bold;
   cursor: pointer;
+
+  /* TAMBAHKAN INI AGAR GAMBAR TIDAK KELUAR DARI LINGKARAN */
+  overflow: hidden;
 }
+
+/* Tambahkan class ini untuk mengatur ukuran gambarnya */
+.avatar-img-small,
+.avatar-img-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Khusus Dashboard, pastikan user-avatar-large juga punya overflow: hidden */
+.user-avatar-large {
+  width: 56px;
+  height: 56px;
+  background-color: #f97316;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  color: white;
+
+  /* TAMBAHKAN INI */
+  overflow: hidden;
+}
+
 
 /* =========================================
    CONTENT AREA & TABLE
@@ -896,10 +942,11 @@ onMounted(fetchFiles);
 .table-wrapper {
   width: 100%;
   /* Overflow Visible untuk mencegah dropdown terpotong! */
-  overflow: visible; 
+  overflow: visible;
   flex: 0 0 auto;
   margin-bottom: auto;
-  padding-bottom: 150px; /* Bantalan untuk dropdown di row terakhir */
+  padding-bottom: 150px;
+  /* Bantalan untuk dropdown di row terakhir */
 }
 
 .file-table {
@@ -982,19 +1029,56 @@ onMounted(fetchFiles);
 /* =========================================
    UTILITIES & ICONS
 ========================================= */
-.icon { width: 20px; height: 20px; }
-.file-icon { flex-shrink: 0; width: 20px; height: 20px; }
-.icon-small { width: 16px; height: 16px; }
-.icon-tiny { width: 12px; height: 12px; }
-.hidden-input { display: none; }
-.flex-align { display: flex; align-items: center; }
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.file-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.icon-small {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-tiny {
+  width: 12px;
+  height: 12px;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.flex-align {
+  display: flex;
+  align-items: center;
+}
 
 /* Dynamic Icon Colors */
-.color-folder { color: #ffca28; }
-.color-danger { color: #ef4444; }
-.color-info { color: #3b82f6; }
-.color-muted { color: #9ca3af; }
-.text-success { color: var(--color-success); }
+.color-folder {
+  color: #ffca28;
+}
+
+.color-danger {
+  color: #ef4444;
+}
+
+.color-info {
+  color: #3b82f6;
+}
+
+.color-muted {
+  color: #9ca3af;
+}
+
+.text-success {
+  color: var(--color-success);
+}
 
 /* =========================================
    MODAL STYLES (GENERAL)
@@ -1054,7 +1138,9 @@ onMounted(fetchFiles);
   transition: border-color 0.2s;
 }
 
-.modal-input:focus { border-color: var(--bg-button); }
+.modal-input:focus {
+  border-color: var(--bg-button);
+}
 
 .modal-footer {
   display: flex;
@@ -1095,32 +1181,63 @@ onMounted(fetchFiles);
   transition: background-color 0.2s;
 }
 
-.btn-confirm:hover:not(:disabled) { background-color: var(--bg-button-hover); }
-.btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-confirm:hover:not(:disabled) {
+  background-color: var(--bg-button-hover);
+}
+
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* FILE INFO SPECIFIC */
-.info-body { display: flex; flex-direction: column; gap: 12px; }
-.info-row { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; }
-.info-row:last-child { border-bottom: none; padding-bottom: 0; }
-.info-label { color: var(--text-secondary); font-size: 13px; }
-.info-value { color: var(--text-primary); font-size: 13px; font-weight: 500; text-align: right; max-width: 65%; word-break: break-word; }
+.info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-/* =========================================
-   QUICK ACCESS SECTION
-========================================= */
-.quick-access-section { padding: 0 4px; }
-.section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 4px; }
-.section-label-bold { font-size: 12px; font-weight: 700; color: #ffffff; }
-.btn-icon-tiny { background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.btn-icon-tiny:hover { color: #ffffff; }
-.collapsible-wrapper { display: flex; flex-direction: column; gap: 2px; }
-.collapsible-header { gap: 8px; padding: 8px; font-size: 13px; color: #dddddd; }
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--border-color);
+  padding-bottom: 8px;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.info-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  max-width: 65%;
+  word-break: break-word;
+}
 
 /* =========================================
    ACTION DROPDOWN (TRIPLE DOT MENU)
 ========================================= */
-.dropdown-cell { position: relative; }
-.invisible-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 90; }
+.dropdown-cell {
+  position: relative;
+}
+
+.invisible-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 90;
+}
 
 .action-dropdown {
   position: absolute;
@@ -1149,9 +1266,114 @@ onMounted(fetchFiles);
   transition: background-color 0.2s;
 }
 
-.dropdown-item:hover { background-color: #3a3a3a; }
-.dropdown-item .icon-small { color: var(--text-secondary); }
-.dropdown-divider { height: 1px; background-color: var(--border-color); margin: 4px 0; }
-.text-danger { color: #ef4444 !important; }
-.text-danger .icon-small { color: #ef4444; }
+.dropdown-item:hover {
+  background-color: #3a3a3a;
+}
+
+.dropdown-item .icon-small {
+  color: var(--text-secondary);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 0;
+}
+
+.text-danger {
+  color: #ef4444 !important;
+}
+
+.text-danger .icon-small {
+  color: #ef4444;
+}
+
+/* =========================================
+   PROFILE DROPDOWN MODAL
+========================================= */
+.profile-dropdown-wrapper {
+  position: relative;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  background-color: #262626;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 260px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  text-align: center;
+  padding-left: 20px;
+}
+
+.profile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px 20px 16px;
+  gap: 12px;
+}
+
+.user-avatar-large {
+  width: 56px;
+  height: 56px;
+  background-color: #f97316;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  color: white;
+}
+
+.profile-greeting {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.dropdown-divider-full {
+  height: 1px;
+  background-color: var(--border-color);
+  width: 100%;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+}
+
+.profile-menu-item:hover {
+  background-color: #333333;
+}
+
+.profile-menu-item .icon-small {
+  color: var(--text-secondary);
+}
 </style>
