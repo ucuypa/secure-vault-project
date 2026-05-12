@@ -86,7 +86,7 @@
                   </div>
                 </div>
 
-                <button v-if="profileImageUrl" class="btn-delete-photo-side" @click.stop="removeProfilePicture"
+                <button v-if="profileImageUrl" class="btn-delete-photo-side" @click.stop="triggerRemoveProfile"
                   title="Remove photo">
                   <Trash2 class="icon-trash-action" />
                   <span>Remove Photo</span>
@@ -139,11 +139,12 @@
         </div>
       </section>
     </main>
+    <ConfirmModal :show="showConfirmModal" title="Remove Confirmation"
+      message="Are you sure you want to remove this? This action cannot be undone." confirmText="Remove"
+      @close="showConfirmModal = false" @confirm="executeRemove" />
+
     <NotificationModal :show="showNotificationModal" :type="notificationType" :title="notificationTitle"
       :message="notificationMessage" @close="showNotificationModal = false" />
-    <ConfirmModal :show="showLogoutModal" title="Confirm Logout"
-      message="Are you sure you want to sign out of your account?" confirmText="Logout" @close="showLogoutModal = false"
-      @confirm="executeLogout" />
   </div>
 </template>
 
@@ -168,12 +169,36 @@ const notificationType = ref('error');
 const notificationTitle = ref('');
 const notificationMessage = ref('');
 const showLogoutModal = ref(false);
+const showConfirmModal = ref(false);
 
 const triggerNotification = (type, title, message) => {
   notificationType.value = type;
   notificationTitle.value = title;
   notificationMessage.value = message;
   showNotificationModal.value = true;
+};
+
+const triggerRemoveProfile = () => {
+  showConfirmModal.value = true;
+};
+
+const executeRemove = async () => {
+  try {
+    localStorage.removeItem('profileImage');
+
+    // Hapus URL lokal agar UI langsung update
+    profileImageUrl.value = null;
+
+    // Tutup modal
+    showConfirmModal.value = false;
+
+    // Munculkan notifikasi sukses
+    triggerNotification('success', 'Photo Removed', 'Your profile photo has been removed.');
+  } catch (error) {
+    console.error('Failed to remove photo:', error);
+    showConfirmModal.value = false;
+    triggerNotification('error', 'Action Failed', 'Failed to remove photo. Please try again.');
+  }
 };
 
 const profileForm = ref({
@@ -223,13 +248,6 @@ const handleFileChange = (event) => {
       localStorage.setItem('profileImage', e.target.result);
     };
     reader.readAsDataURL(file);
-  }
-};
-
-const removeProfilePicture = () => {
-  if (triggerNotification('Remove profile picture?')) {
-    profileImageUrl.value = null;
-    localStorage.removeItem('profileImage');
   }
 };
 

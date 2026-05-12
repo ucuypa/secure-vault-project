@@ -19,12 +19,14 @@
         </div>
 
         <div class="nav-item">
-          <Bell class="icon" />
-          <span>Activity</span>
+          <router-link to="/activity" class="nav-item" style="text-decoration: none;">
+            <Bell class="icon" />
+            <span>Activity</span>
+          </router-link>
         </div>
 
         <div class="nav-item">
-          <router-link to="/profile" class="nav-item">
+          <router-link to="/profile" class="nav-item" style="text-decoration: none;">
             <User class="icon" />
             <span>Profile</span>
           </router-link>
@@ -141,10 +143,30 @@
                 </td>
                 <td class="text-muted">{{ formatDate(file.created_at) }}</td>
                 <td class="text-muted">{{ file.mime_type === 'directory' ? '--' : formatSize(file.file_size) }}</td>
-                <td class="text-right">
-                  <button class="btn-icon">
+                <td class="text-right dropdown-cell">
+                  <button class="btn-icon" @click.stop="toggleDropdown(file.id)">
                     <MoreVertical class="icon" />
                   </button>
+
+                  <div v-if="activeDropdownId === file.id" class="action-dropdown" @click.stop>
+                    <div class="dropdown-item" @click="downloadFile(file)">
+                      <Download class="icon-small" />
+                      <span>Download</span>
+                    </div>
+                    <div class="dropdown-item" @click="renameFile(file)">
+                      <Edit2 class="icon-small" />
+                      <span>Rename</span>
+                    </div>
+                    <div class="dropdown-item" @click="showFileInfo(file)">
+                      <Info class="icon-small" />
+                      <span>File information</span>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item text-danger" @click="deleteFile(file)">
+                      <Trash2 class="icon-small" />
+                      <span>Delete</span>
+                    </div>
+                  </div>
                 </td>
               </tr>
               <tr v-if="files.length === 0">
@@ -157,6 +179,7 @@
     </main>
 
     <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden-input">
+    
     <div v-if="showFolderModal" class="modal-overlay" @click.self="closeFolderModal">
       <div class="modal-card">
         <div class="modal-header">
@@ -179,19 +202,94 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showRenameModal" class="modal-overlay" @click.self="closeRenameModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Rename</h3>
+          <button @click="closeRenameModal" class="btn-icon">
+            <X class="icon-small" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <input v-model="newFileName" type="text" placeholder="New name" class="modal-input"
+            @keyup.enter="submitRename" autofocus />
+        </div>
+        <div class="modal-footer">
+          <button @click="closeRenameModal" class="btn-cancel">Cancel</button>
+          <button @click="submitRename" :disabled="!newFileName.trim() || isRenaming" class="btn-confirm">
+            {{ isRenaming ? 'Saving...' : 'Rename' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showInfoModal" class="modal-overlay" @click.self="closeInfoModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>File Information</h3>
+          <button @click="closeInfoModal" class="btn-icon">
+            <X class="icon-small" />
+          </button>
+        </div>
+        <div class="modal-body info-body">
+          <div class="info-row">
+            <span class="info-label">Name</span>
+            <span class="info-value">{{ fileInfoData?.original_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Type</span>
+            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? 'Folder' : fileInfoData?.mime_type }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Size</span>
+            <span class="info-value">{{ fileInfoData?.mime_type === 'directory' ? '--' : formatSize(fileInfoData?.file_size) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Uploaded</span>
+            <span class="info-value">{{ formatDate(fileInfoData?.created_at) }}</span>
+          </div>
+          <div class="info-row" v-if="fileInfoData?.mime_type !== 'directory'">
+            <span class="info-label">Security</span>
+            <span class="info-value text-success flex-align">
+              <Lock class="icon-tiny" style="margin-right: 4px;" /> AES-256 Encrypted
+            </span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeInfoModal" class="btn-confirm">Understood</button>
+        </div>
+      </div>
+    </div>
+
+    <ConfirmModal 
+      :show="showDeleteModal" 
+      title="Delete Confirmation" 
+      :message="`Are you sure you want to permanently delete '${fileToDelete?.original_name}'?`" 
+      confirmText="Delete"
+      @close="showDeleteModal = false" 
+      @confirm="executeDelete" 
+    />
+    
+    <div v-if="activeDropdownId" class="invisible-overlay" @click="closeDropdown"></div>
+    <NotificationModal :show="showNotificationModal" :type="notificationType" :title="notificationTitle"
+      :message="notificationMessage" @close="showNotificationModal = false" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router'; // WAJIB untuk FolderView
+import { useRoute, useRouter } from 'vue-router';
 import axios from '../api/axios';
 import {
   Settings, Home as HomeIcon, Folder, LayoutGrid, Search, Plus,
   Upload, FolderPlus, ChevronDown, MoreVertical, ArrowDown,
   FileText, FileImage, FileCode, File as FileGeneric,
-  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, ArrowLeft
+  User, X, Bell, Grip, Image as ImageIcon, Users, FileQuestion, Trash2, ChevronRight, Video, File, ArrowLeft,
+  Download, Edit2, Info, Lock
 } from 'lucide-vue-next';
+import NotificationModal from '../components/NotificationModal.vue';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const route = useRoute();
 const router = useRouter(); 
@@ -201,12 +299,153 @@ const userInitial = computed(() => user.name ? user.name[0].toUpperCase() : 'U')
 const fileInput = ref(null);
 const isUploading = ref(false);
 
+// State Dropdown
+const activeDropdownId = ref(null);
+
+// State Modals
 const showFolderModal = ref(false);
 const newFolderName = ref('');
 const isCreatingFolder = ref(false);
 
+const showDeleteModal = ref(false);
+const fileToDelete = ref(null);
+
+const showRenameModal = ref(false);
+const fileToRename = ref(null);
+const newFileName = ref('');
+const isRenaming = ref(false);
+
+const showInfoModal = ref(false);
+const fileInfoData = ref(null);
+
+// State Notification
+const showNotificationModal = ref(false);
+const notificationType = ref('error');
+const notificationTitle = ref('');
+const notificationMessage = ref('');
+
 // Tangkap ID dinamis dari URL
 const currentFolderId = computed(() => route.params.id);
+
+const triggerNotification = (type, title, message) => {
+  notificationType.value = type;
+  notificationTitle.value = title;
+  notificationMessage.value = message;
+  showNotificationModal.value = true;
+};
+
+const toggleDropdown = (id) => { activeDropdownId.value = activeDropdownId.value === id ? null : id; };
+const closeDropdown = () => { activeDropdownId.value = null; };
+
+// ==========================================
+// API INTEGRATION: DELETE, RENAME, DOWNLOAD, INFO
+// ==========================================
+
+const showFileInfo = (file) => { 
+  closeDropdown(); 
+  fileInfoData.value = file;
+  showInfoModal.value = true;
+};
+
+const closeInfoModal = () => {
+  showInfoModal.value = false;
+  fileInfoData.value = null;
+};
+
+const renameFile = (file) => { 
+  closeDropdown(); 
+  fileToRename.value = file;
+  newFileName.value = file.original_name;
+  showRenameModal.value = true;
+};
+
+const closeRenameModal = () => {
+  showRenameModal.value = false;
+  fileToRename.value = null;
+  newFileName.value = '';
+};
+
+const submitRename = async () => {
+  if (!newFileName.value.trim() || newFileName.value === fileToRename.value.original_name) {
+    closeRenameModal();
+    return;
+  }
+
+  isRenaming.value = true;
+  try {
+    await axios.put(`/files/${fileToRename.value.id}`, {
+      original_name: newFileName.value.trim()
+    });
+
+    const index = files.value.findIndex(f => f.id === fileToRename.value.id);
+    if (index !== -1) {
+      files.value[index].original_name = newFileName.value.trim();
+    }
+
+    triggerNotification('success', 'Rename Successful', `Renamed to "${newFileName.value.trim()}".`);
+    closeRenameModal();
+  } catch (error) {
+    console.error("Error renaming:", error);
+    triggerNotification('error', 'Rename Failed', 'Failed to rename the file. Please try again.');
+  } finally {
+    isRenaming.value = false;
+  }
+};
+
+const deleteFile = (file) => {
+  closeDropdown();
+  fileToDelete.value = file;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  if (!fileToDelete.value) return;
+
+  try {
+    await axios.delete(`/files/${fileToDelete.value.id}`);
+    files.value = files.value.filter(f => f.id !== fileToDelete.value.id);
+    
+    showDeleteModal.value = false;
+    triggerNotification('success', 'Deleted', `"${fileToDelete.value.original_name}" has been permanently removed.`);
+  } catch (error) {
+    console.error("Error saat menghapus:", error);
+    triggerNotification('error', 'Deletion Failed', 'Failed to delete the file. Please try again.');
+  } finally {
+    fileToDelete.value = null;
+  }
+};
+
+const downloadFile = async (file) => {
+  closeDropdown();
+  
+  if (file.mime_type === 'directory') {
+    triggerNotification('error', 'Download Failed', 'Cannot download a folder directly.');
+    return;
+  }
+
+  try {
+    const response = await axios.get(`/files/${file.id}/download`, {
+      responseType: 'blob' 
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', file.original_name); 
+    document.body.appendChild(link);
+    link.click();
+    
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error saat mendownload:", error);
+    triggerNotification('error', 'Download Failed', 'The file could not be downloaded.');
+  }
+};
+
+// ==========================================
+// UPLOAD & FETCHING LOGIC
+// ==========================================
 
 const triggerFileUpload = () => {
   fileInput.value.click();
@@ -215,7 +454,7 @@ const triggerFileUpload = () => {
 const fetchFiles = async () => {
   try {
     const response = await axios.get('/files', {
-      params: { parent_id: currentFolderId.value } // Mengambil file spesifik untuk folder ini
+      params: { parent_id: currentFolderId.value } 
     });
     files.value = response.data.data;
   } catch (error) {
@@ -223,7 +462,6 @@ const fetchFiles = async () => {
   }
 };
 
-// Pantau URL, fetch ulang jika user masuk ke sub-folder
 watch(() => route.params.id, (newId) => {
   if (newId) {
     fetchFiles();
@@ -235,7 +473,7 @@ const handleFileUpload = async (event) => {
   if (!file) return;
 
   if (file.size > 10 * 1024 * 1024) {
-    alert('File size exceeds 10MB limit.');
+    triggerNotification('error', 'Upload Failed', 'File size exceeds 10MB limit.');
     event.target.value = '';
     return;
   }
@@ -243,7 +481,6 @@ const handleFileUpload = async (event) => {
   const formData = new FormData();
   formData.append('file', file);
   
-  // Mengunggah file ke dalam folder saat ini
   if (currentFolderId.value) {
     formData.append('parent_id', currentFolderId.value);
   }
@@ -255,11 +492,11 @@ const handleFileUpload = async (event) => {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    alert('Success: ' + response.data.message);
+    triggerNotification('success', 'Upload Successful', response.data.message);
     fetchFiles();
   } catch (error) {
     console.error('Upload error:', error);
-    alert('Upload failed. Make sure file is valid and try again.');
+    triggerNotification('error', 'Upload Failed', 'Upload failed. Make sure file is valid and try again.');
   } finally {
     isUploading.value = false;
     event.target.value = '';
@@ -312,14 +549,15 @@ const submitFolder = async () => {
   try {
     await axios.post('/files', {
       name: newFolderName.value.trim(),
-      parent_id: currentFolderId.value // Buat folder baru di dalam wadah folder ini
+      parent_id: currentFolderId.value 
     });
 
     fetchFiles();
     closeFolderModal();
+    triggerNotification('success', 'Folder Created', `Folder "${newFolderName.value}" has been created.`);
   } catch (error) {
     console.error("Error creating folder:", error);
-    alert("Failed to create folder.");
+    triggerNotification('error', 'Folder Creation Failed', 'Failed to create folder.');
   } finally {
     isCreatingFolder.value = false;
   }
@@ -345,63 +583,35 @@ const searchQuery = ref('');
 const filteredFiles = computed(() => {
   let result = files.value;
 
-  if (currentFilter.value === 'folders') {
-    result = result.filter(file => file.mime_type === 'directory');
-  }
-  else if (currentFilter.value === 'photos') {
-    result = result.filter(file => file.mime_type.includes('image'));
-  }
-  else if (currentFilter.value === 'videos') {
-    result = result.filter(file => file.mime_type.includes('video'));
-  }
+  if (currentFilter.value === 'folders') { result = result.filter(file => file.mime_type === 'directory'); }
+  else if (currentFilter.value === 'photos') { result = result.filter(file => file.mime_type.includes('image')); }
+  else if (currentFilter.value === 'videos') { result = result.filter(file => file.mime_type.includes('video')); }
   else if (currentFilter.value === 'documents') {
-    result = result.filter(file =>
-      file.mime_type.includes('pdf') ||
-      file.mime_type.includes('document') ||
-      file.mime_type.includes('msword') ||
-      file.mime_type.includes('text')
-    );
+    result = result.filter(file => file.mime_type.includes('pdf') || file.mime_type.includes('document') || file.mime_type.includes('msword') || file.mime_type.includes('text'));
   }
   else if (currentFilter.value === 'others') {
-    result = result.filter(file =>
-      file.mime_type !== 'directory' &&
-      !file.mime_type.includes('image') &&
-      !file.mime_type.includes('video') &&
-      !file.mime_type.includes('pdf') &&
-      !file.mime_type.includes('document') &&
-      !file.mime_type.includes('msword') &&
-      !file.mime_type.includes('text')
-    );
+    result = result.filter(file => file.mime_type !== 'directory' && !file.mime_type.includes('image') && !file.mime_type.includes('video') && !file.mime_type.includes('pdf') && !file.mime_type.includes('document') && !file.mime_type.includes('msword') && !file.mime_type.includes('text'));
   }
 
   if (searchQuery.value.trim() !== '') {
     const keyword = searchQuery.value.toLowerCase();
-    result = result.filter(file =>
-      file.original_name.toLowerCase().includes(keyword)
-    );
+    result = result.filter(file => file.original_name.toLowerCase().includes(keyword));
   }
 
   result = result.sort((a, b) => {
     const isFolderA = a.mime_type === 'directory';
     const isFolderB = b.mime_type === 'directory';
-
     if (isFolderA && !isFolderB) return -1;
     if (!isFolderA && isFolderB) return 1;
-
     return a.original_name.localeCompare(b.original_name);
   });
 
   return result;
 });
 
-// Memungkinkan navigasi masuk ke sub-folder
 const openFolder = (folder) => {
   if (folder.mime_type !== 'directory') return;
-
-  router.push({
-    path: `/folder/${folder.id}`,
-    query: { name: folder.original_name } 
-  });
+  router.push({ path: `/folder/${folder.id}`, query: { name: folder.original_name } });
 };
 
 const goBack = () => {
@@ -446,6 +656,7 @@ onMounted(fetchFiles);
   --text-secondary: #a0a0a0;
   --text-muted: #6e6e6e;
   --text-inverse: #000000;
+  --color-success: #10b981;
 
   display: flex;
   height: 100vh;
@@ -680,22 +891,27 @@ onMounted(fetchFiles);
 }
 
 /* =========================================
-   TABLE STYLES (Fixed Borders)
+   TABLE STYLES 
 ========================================= */
 .table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  /* Overflow Visible untuk mencegah dropdown terpotong! */
+  overflow: visible; 
+  flex: 0 0 auto;
+  margin-bottom: auto;
+  padding-bottom: 150px; /* Bantalan untuk dropdown di row terakhir */
 }
 
 .file-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  height: max-content;
 }
 
 .file-table th,
 .file-table td {
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -704,10 +920,12 @@ onMounted(fetchFiles);
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 13px;
+  padding-bottom: 16px;
 }
 
 .file-row {
   transition: background-color 0.2s;
+  height: 56px;
 }
 
 .file-row:hover td {
@@ -764,50 +982,22 @@ onMounted(fetchFiles);
 /* =========================================
    UTILITIES & ICONS
 ========================================= */
-.icon {
-  width: 20px;
-  height: 20px;
-}
-
-.file-icon {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-}
-
-.icon-small {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-tiny {
-  width: 12px;
-  height: 12px;
-}
-
-.hidden-input {
-  display: none;
-}
+.icon { width: 20px; height: 20px; }
+.file-icon { flex-shrink: 0; width: 20px; height: 20px; }
+.icon-small { width: 16px; height: 16px; }
+.icon-tiny { width: 12px; height: 12px; }
+.hidden-input { display: none; }
+.flex-align { display: flex; align-items: center; }
 
 /* Dynamic Icon Colors */
-.color-folder {
-  color: #ffca28;
-}
-
-.color-danger {
-  color: #ef4444;
-}
-
-.color-info {
-  color: #3b82f6;
-}
-
-.color-muted {
-  color: #9ca3af;
-}
+.color-folder { color: #ffca28; }
+.color-danger { color: #ef4444; }
+.color-info { color: #3b82f6; }
+.color-muted { color: #9ca3af; }
+.text-success { color: var(--color-success); }
 
 /* =========================================
-   MODAL POP-UP (NEW FOLDER)
+   MODAL STYLES (GENERAL)
 ========================================= */
 .modal-overlay {
   position: fixed;
@@ -864,9 +1054,7 @@ onMounted(fetchFiles);
   transition: border-color 0.2s;
 }
 
-.modal-input:focus {
-  border-color: var(--bg-button);
-}
+.modal-input:focus { border-color: var(--bg-button); }
 
 .modal-footer {
   display: flex;
@@ -907,71 +1095,63 @@ onMounted(fetchFiles);
   transition: background-color 0.2s;
 }
 
-.btn-confirm:hover:not(:disabled) {
-  background-color: var(--bg-button-hover);
-}
+.btn-confirm:hover:not(:disabled) { background-color: var(--bg-button-hover); }
+.btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-confirm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* FILE INFO SPECIFIC */
+.info-body { display: flex; flex-direction: column; gap: 12px; }
+.info-row { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; }
+.info-row:last-child { border-bottom: none; padding-bottom: 0; }
+.info-label { color: var(--text-secondary); font-size: 13px; }
+.info-value { color: var(--text-primary); font-size: 13px; font-weight: 500; text-align: right; max-width: 65%; word-break: break-word; }
 
 /* =========================================
    QUICK ACCESS SECTION
 ========================================= */
-.quick-access-section {
-  padding: 0 4px;
-}
+.quick-access-section { padding: 0 4px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 4px; }
+.section-label-bold { font-size: 12px; font-weight: 700; color: #ffffff; }
+.btn-icon-tiny { background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.btn-icon-tiny:hover { color: #ffffff; }
+.collapsible-wrapper { display: flex; flex-direction: column; gap: 2px; }
+.collapsible-header { gap: 8px; padding: 8px; font-size: 13px; color: #dddddd; }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px;
-  margin-bottom: 4px;
-}
+/* =========================================
+   ACTION DROPDOWN (TRIPLE DOT MENU)
+========================================= */
+.dropdown-cell { position: relative; }
+.invisible-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 90; }
 
-.section-label-bold {
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.btn-icon-tiny {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon-tiny:hover {
-  color: #ffffff;
-}
-
-.collapsible-wrapper {
+.action-dropdown {
+  position: absolute;
+  right: 40px;
+  top: 10px;
+  background-color: #2a2a2a;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 200px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  z-index: 999;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  text-align: left;
 }
 
-.collapsible-header {
-  gap: 8px;
-  padding: 8px;
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
   font-size: 13px;
-  color: #dddddd;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.collapsible-content {
-  padding: 4px 8px 16px 28px;
-  /* Indentasi ke dalam */
-}
-
-.empty-drag-text {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
+.dropdown-item:hover { background-color: #3a3a3a; }
+.dropdown-item .icon-small { color: var(--text-secondary); }
+.dropdown-divider { height: 1px; background-color: var(--border-color); margin: 4px 0; }
+.text-danger { color: #ef4444 !important; }
+.text-danger .icon-small { color: #ef4444; }
 </style>
