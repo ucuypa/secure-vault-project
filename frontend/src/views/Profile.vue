@@ -26,12 +26,6 @@
             <span>Activity</span>
           </router-link>
         </div>
-        <div class="nav-item active">
-          <router-link to="/profile" class="nav-item active" style="text-decoration: none;">
-            <User class="icon" />
-            <span>Profile</span>
-          </router-link>
-        </div>
       </nav>
     </aside>
 

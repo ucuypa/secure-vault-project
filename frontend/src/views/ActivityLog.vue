@@ -34,11 +34,43 @@
           </div>
         </div>
 
-        <router-link to="/profile" style="text-decoration: none; color: inherit;">
-          <div class="user-avatar">
-            {{ userInitial }}
+        <div class="profile-dropdown-wrapper">
+          <div class="user-avatar" @click="toggleProfileDropdown">
+            <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-small" />
+            <span v-else>{{ userInitial }}</span>
           </div>
-        </router-link>
+
+          <div v-if="showProfileDropdown" class="profile-dropdown" @click.stop>
+            <div class="profile-header">
+              <span class="user-email">{{ userObj.email || 'user@gmail.com' }}</span>
+              <button class="btn-icon-tiny" @click="closeProfileDropdown">
+                <X class="icon-small" />
+              </button>
+            </div>
+
+            <div class="profile-body">
+              <div class="user-avatar-large">
+                <img v-if="profileImageUrl" :src="profileImageUrl" class="avatar-img-small" />
+                <span v-else>{{ userInitial }}</span>
+              </div>
+              <p class="profile-greeting">Hi, {{ userObj.name || 'User' }}!</p>
+            </div>
+
+            <div class="dropdown-divider-full"></div>
+
+            <router-link to="/profile" class="profile-menu-item" @click="closeProfileDropdown">
+              <User class="icon-small" />
+              <span>Manage account</span>
+            </router-link>
+
+            <div class="dropdown-divider-full"></div>
+
+            <div class="profile-menu-item" @click="handleLogout">
+              <LogOut class="icon-small" />
+              <span>Log out</span>
+            </div>
+          </div>
+        </div>
       </header>
 
       <section class="content-area">
@@ -82,24 +114,44 @@
         </div>
       </section>
     </main>
+
+    <div v-if="showProfileDropdown" class="invisible-overlay" @click="closeProfileDropdown"></div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-// import activityService from '../api/activity.js';
+import { useRouter } from 'vue-router'; // Tambahkan useRouter
 import axios from '../api/axios.js';
 import {
   Home as HomeIcon, Folder, Bell, User,
   LayoutGrid, Trash2, Plus, ChevronDown, Search,
-  Image as ImageIcon, FileText, Video, File // Import ikon tambahan yang benar
+  Image as ImageIcon, FileText, Video, File, X, LogOut // Import X dan LogOut
 } from 'lucide-vue-next';
 
+const router = useRouter(); // Inisialisasi router
 const logs = ref([]);
+const profileImageUrl = ref(null);
+
+// State Dropdown
+const showProfileDropdown = ref(false);
 
 // Get user info for Avatar
 const userObj = JSON.parse(localStorage.getItem('user') || '{}');
 const userInitial = computed(() => userObj.name ? userObj.name[0].toUpperCase() : 'U');
+
+// Fungsi Dropdown
+const toggleProfileDropdown = () => { showProfileDropdown.value = !showProfileDropdown.value; };
+const closeProfileDropdown = () => { showProfileDropdown.value = false; };
+
+// Fungsi Logout
+const handleLogout = () => {
+  if (confirm('Logout?')) {
+    localStorage.clear();
+    router.push('/login');
+  }
+  closeProfileDropdown();
+};
 
 const fetchLogs = async () => {
   try {
@@ -123,7 +175,14 @@ const getBadgeClass = (action) => {
   return 'badge-info';
 };
 
-onMounted(fetchLogs);
+onMounted(() => {
+  fetchLogs();
+
+  const savedImage = localStorage.getItem('profileImage');
+  if (savedImage) {
+    profileImageUrl.value = savedImage;
+  }
+});
 </script>
 
 <style scoped>
@@ -350,6 +409,126 @@ onMounted(fetchLogs);
   justify-content: center;
   font-weight: bold;
   cursor: pointer;
+  overflow: hidden;
+}
+
+.avatar-img-small {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* =========================================
+   PROFILE DROPDOWN
+========================================= */
+.profile-dropdown-wrapper {
+  position: relative;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  background-color: #262626;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 260px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  text-align: center;
+  padding-left: 20px;
+}
+
+.profile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px 20px 16px;
+  gap: 12px;
+}
+
+.user-avatar-large {
+  width: 56px;
+  height: 56px;
+  background-color: #f97316;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 24px;
+  color: white;
+  overflow: hidden;
+}
+
+.profile-greeting {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.dropdown-divider-full {
+  height: 1px;
+  background-color: var(--border-color);
+  width: 100%;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+}
+
+.profile-menu-item:hover {
+  background-color: #333333;
+}
+
+.profile-menu-item .icon-small {
+  color: var(--text-secondary);
+}
+
+.invisible-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 90;
+}
+
+.btn-icon-tiny {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-tiny:hover {
+  color: #ffffff;
 }
 
 /* =========================================
@@ -522,137 +701,38 @@ onMounted(fetchLogs);
 }
 
 /* =========================================
-   MODAL POP-UP (NEW FOLDER)
+   BADGES (Khusus Activity)
 ========================================= */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-card {
-  background-color: var(--bg-sidebar);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.modal-header h3 {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-input {
-  width: 100%;
-  background-color: var(--bg-main);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 10px 14px;
-  color: var(--text-primary);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.modal-input:focus {
-  border-color: var(--bg-button);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
-  background-color: var(--bg-main);
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
-}
-
-.btn-cancel {
-  background-color: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-cancel:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.btn-confirm {
-  background-color: var(--bg-button);
-  color: var(--text-inverse);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-confirm:hover:not(:disabled) {
-  background-color: var(--bg-button-hover);
-}
-
-.btn-confirm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* =========================================
-   SIDEBAR FOLDER SECTION
-========================================= */
-.folder-list-section {
-  margin-top: 32px;
-}
-
-.section-label {
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 12px;
-  padding: 0 8px;
 }
 
-.truncate-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
+.badge-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
+.badge-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-info {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-muted {
+  background-color: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+}
 </style>
